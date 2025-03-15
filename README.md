@@ -1,5 +1,5 @@
 # Beam
-A 2D game engine written in Go using Raylib.
+2D game engine tools written in Go using Raylib.
 
 
 ### Examples
