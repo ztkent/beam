@@ -14,9 +14,9 @@ const (
 )
 
 var ResolutionOptions = map[Resolution][3]int32{
-	Resolution1280x800:  {1280, 800, 17},  // 16:10
-	Resolution1280x720:  {1280, 720, 17},  // 16:9
-	Resolution1920x1080: {1920, 1080, 24}, // 16:9
+	Resolution1280x800:  {1280, 800, 20},  // 16:10
+	Resolution1280x720:  {1280, 720, 20},  // 16:9
+	Resolution1920x1080: {1920, 1080, 27}, // 16:9
 }
 
 func InitScreenAtResolution(res Resolution, title string) (int32, int32, int32) {
