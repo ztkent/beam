@@ -3,7 +3,8 @@
 
 
 ### Examples
-[Primo's Dungeon](https://github.com/ztkent/primos-dungeon) - 2D roguelike dungeon crawler.
+[Primo's Dungeon](https://github.com/ztkent/primos-dungeon) - 2D roguelike dungeon crawler.  
+[Spritesheet Viewer](https://github.com/ztkent/spritesheet-viewer) - Tool for viewing and inspecting sprite sheets.    
 
 ### Features
 - [x] Resource management
