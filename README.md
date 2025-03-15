@@ -19,5 +19,3 @@ A 2D game engine written in Go using Raylib.
 ### Sprite Sheets
 - [x] Sprite sheet loading
 - [x] Supports specific texture, or can automatically add them all in order.
-
-#### SpriteSheet Viewer
