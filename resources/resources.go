@@ -2,6 +2,8 @@ package resources
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -145,10 +147,11 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 				Loaded:   false,
 			}
 
-			// Load texture temporarily to get dimensions if SheetData is empty
+			// Automatically load all sprites in the sheet. Assign names based on their path & position.
 			if len(def.SheetData) == 0 {
 				tempTexture := rl.LoadTexture(def.Path)
-				def.SheetData = ScanSpriteSheet(tempTexture, gridSize, margin)
+				fileName := strings.TrimSuffix(filepath.Base(def.Path), filepath.Ext(def.Path))
+				def.SheetData = ScanSpriteSheet(fileName, tempTexture, gridSize, margin)
 				rl.UnloadTexture(tempTexture)
 			}
 
@@ -191,13 +194,13 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 	return nil
 }
 
-func ScanSpriteSheet(texture rl.Texture2D, spriteSize, margin int32) map[string][]int32 {
+func ScanSpriteSheet(fileName string, texture rl.Texture2D, spriteSize, margin int32) map[string][]int32 {
 	sheetData := make(map[string][]int32)
 	cols := (texture.Width) / (spriteSize + margin)
 	rows := (texture.Height) / (spriteSize + margin)
 	for row := int32(0); row < rows; row++ {
 		for col := int32(0); col < cols; col++ {
-			spriteName := fmt.Sprintf("%d_%d", row, col)
+			spriteName := fmt.Sprintf("%s_%d_%d", fileName, row, col)
 			sheetData[spriteName] = []int32{col, row}
 		}
 	}
