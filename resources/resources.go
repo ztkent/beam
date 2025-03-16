@@ -287,30 +287,49 @@ func (rm *ResourceManager) RemoveView(viewName string) error {
 	return fmt.Errorf("view not found: %s", viewName)
 }
 
-func (rm *ResourceManager) GetTexture(viewName, textureName string) (rl.Texture2D, error) {
-	for _, view := range rm.Scenes {
-		if view.Name == viewName {
-			for _, tex := range view.Textures {
-				if tex.Name == textureName && tex.Loaded {
-					return tex.Texture, nil
-				}
-			}
-			return rl.Texture2D{}, fmt.Errorf("texture not found or not loaded: %s", textureName)
-		}
-	}
-	return rl.Texture2D{}, fmt.Errorf("view not found: %s", viewName)
+type TextureInfo struct {
+	Texture rl.Texture2D
+	Region  rl.Rectangle
+	IsSheet bool
 }
 
-func (rm *ResourceManager) GetSheetTexture(viewName, textureName string) (rl.Texture2D, Rectangle, error) {
+func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo, error) {
 	for _, view := range rm.Scenes {
 		if view.Name == viewName {
-			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
-				return tex, rect, nil
+			// Check regular textures
+			for _, tex := range view.Textures {
+				if tex.Name == textureName && tex.Loaded {
+					return TextureInfo{
+						Texture: tex.Texture,
+						Region: rl.Rectangle{
+							X:      0,
+							Y:      0,
+							Width:  float32(tex.Texture.Width),
+							Height: float32(tex.Texture.Height),
+						},
+						IsSheet: false,
+					}, nil
+				}
 			}
-			return rl.Texture2D{}, Rectangle{}, fmt.Errorf("texture not found in sheets: %s", textureName)
+
+			// If not found, check sprite sheets
+			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
+				return TextureInfo{
+					Texture: tex,
+					Region: rl.Rectangle{
+						X:      float32(rect.X),
+						Y:      float32(rect.Y),
+						Width:  float32(rect.Width),
+						Height: float32(rect.Height),
+					},
+					IsSheet: true,
+				}, nil
+			}
+
+			return TextureInfo{}, fmt.Errorf("texture not found: %s", textureName)
 		}
 	}
-	return rl.Texture2D{}, Rectangle{}, fmt.Errorf("view not found: %s", viewName)
+	return TextureInfo{}, fmt.Errorf("view not found: %s", viewName)
 }
 
 func (rm *ResourceManager) GetFont(viewName string) (rl.Font, error) {
