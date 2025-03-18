@@ -3,6 +3,7 @@ package resources
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -295,6 +296,7 @@ func (rm *ResourceManager) RemoveView(viewName string) error {
 }
 
 type TextureInfo struct {
+	Name    string
 	Texture rl.Texture2D
 	Region  rl.Rectangle
 	IsSheet bool
@@ -348,6 +350,7 @@ func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, erro
 			for _, tex := range scene.Textures {
 				if tex.Loaded {
 					textures = append(textures, TextureInfo{
+						Name:    tex.Name,
 						Texture: tex.Texture,
 						Region: rl.Rectangle{
 							X:      0,
@@ -363,8 +366,9 @@ func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, erro
 			// Add sprite sheet entries
 			for _, sheet := range scene.SpriteSheets {
 				if sheet.Loaded {
-					for _, region := range sheet.Sprites {
+					for name, region := range sheet.Sprites {
 						textures = append(textures, TextureInfo{
+							Name:    name,
 							Texture: sheet.Texture,
 							Region: rl.Rectangle{
 								X:      float32(region.X),
@@ -377,7 +381,9 @@ func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, erro
 					}
 				}
 			}
-
+			sort.Slice(textures, func(i, j int) bool {
+				return textures[i].Name < textures[j].Name
+			})
 			return textures, nil
 		}
 	}
