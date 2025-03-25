@@ -2,6 +2,9 @@ package resources
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -80,10 +83,13 @@ func NewResourceManagerWithGlobal(defaultTextures []Resource, defaultFont *Resou
 }
 
 // NewResourceManager creates a resource manager without any default resources
-func NewResourceManager(screenWidth, screenHeight int32) *ResourceManager {
-	return &ResourceManager{
+func NewResourceManager() *ResourceManager {
+	rm := &ResourceManager{
 		Scenes: make([]Scene, 0),
 	}
+	rm.AddScene("default", nil, nil)
+	rm.init()
+	return rm
 }
 
 func (rm *ResourceManager) init() {
@@ -145,10 +151,11 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 				Loaded:   false,
 			}
 
-			// Load texture temporarily to get dimensions if SheetData is empty
+			// Automatically load all sprites in the sheet. Assign names based on their path & position.
 			if len(def.SheetData) == 0 {
 				tempTexture := rl.LoadTexture(def.Path)
-				def.SheetData = ScanSpriteSheet(tempTexture, gridSize, margin)
+				fileName := strings.TrimSuffix(filepath.Base(def.Path), filepath.Ext(def.Path))
+				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSize, margin)
 				rl.UnloadTexture(tempTexture)
 			}
 
@@ -191,13 +198,17 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 	return nil
 }
 
-func ScanSpriteSheet(texture rl.Texture2D, spriteSize, margin int32) map[string][]int32 {
+func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteSize, margin int32) map[string][]int32 {
+	sheetName := fileName
+	if name != "" {
+		sheetName = name
+	}
 	sheetData := make(map[string][]int32)
 	cols := (texture.Width) / (spriteSize + margin)
 	rows := (texture.Height) / (spriteSize + margin)
 	for row := int32(0); row < rows; row++ {
 		for col := int32(0); col < cols; col++ {
-			spriteName := fmt.Sprintf("%d_%d", row, col)
+			spriteName := fmt.Sprintf("%s_%d_%d", sheetName, row, col)
 			sheetData[spriteName] = []int32{col, row}
 		}
 	}
@@ -284,30 +295,99 @@ func (rm *ResourceManager) RemoveView(viewName string) error {
 	return fmt.Errorf("view not found: %s", viewName)
 }
 
-func (rm *ResourceManager) GetTexture(viewName, textureName string) (rl.Texture2D, error) {
-	for _, view := range rm.Scenes {
-		if view.Name == viewName {
-			for _, tex := range view.Textures {
-				if tex.Name == textureName && tex.Loaded {
-					return tex.Texture, nil
-				}
-			}
-			return rl.Texture2D{}, fmt.Errorf("texture not found or not loaded: %s", textureName)
-		}
-	}
-	return rl.Texture2D{}, fmt.Errorf("view not found: %s", viewName)
+type TextureInfo struct {
+	Name    string
+	Texture rl.Texture2D
+	Region  rl.Rectangle
+	IsSheet bool
 }
 
-func (rm *ResourceManager) GetSheetTexture(viewName, textureName string) (rl.Texture2D, Rectangle, error) {
+func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo, error) {
 	for _, view := range rm.Scenes {
 		if view.Name == viewName {
-			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
-				return tex, rect, nil
+			// Check regular textures
+			for _, tex := range view.Textures {
+				if tex.Name == textureName && tex.Loaded {
+					return TextureInfo{
+						Texture: tex.Texture,
+						Region: rl.Rectangle{
+							X:      0,
+							Y:      0,
+							Width:  float32(tex.Texture.Width),
+							Height: float32(tex.Texture.Height),
+						},
+						IsSheet: false,
+					}, nil
+				}
 			}
-			return rl.Texture2D{}, Rectangle{}, fmt.Errorf("texture not found in sheets: %s", textureName)
+
+			// If not found, check sprite sheets
+			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
+				return TextureInfo{
+					Texture: tex,
+					Region: rl.Rectangle{
+						X:      float32(rect.X),
+						Y:      float32(rect.Y),
+						Width:  float32(rect.Width),
+						Height: float32(rect.Height),
+					},
+					IsSheet: true,
+				}, nil
+			}
+
+			return TextureInfo{}, fmt.Errorf("texture not found: %s", textureName)
 		}
 	}
-	return rl.Texture2D{}, Rectangle{}, fmt.Errorf("view not found: %s", viewName)
+	return TextureInfo{}, fmt.Errorf("view not found: %s", viewName)
+}
+
+func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, error) {
+	for _, scene := range rm.Scenes {
+		if scene.Name == sceneName {
+			var textures []TextureInfo
+
+			// Add regular textures
+			for _, tex := range scene.Textures {
+				if tex.Loaded {
+					textures = append(textures, TextureInfo{
+						Name:    tex.Name,
+						Texture: tex.Texture,
+						Region: rl.Rectangle{
+							X:      0,
+							Y:      0,
+							Width:  float32(tex.Texture.Width),
+							Height: float32(tex.Texture.Height),
+						},
+						IsSheet: false,
+					})
+				}
+			}
+
+			// Add sprite sheet entries
+			for _, sheet := range scene.SpriteSheets {
+				if sheet.Loaded {
+					for name, region := range sheet.Sprites {
+						textures = append(textures, TextureInfo{
+							Name:    name,
+							Texture: sheet.Texture,
+							Region: rl.Rectangle{
+								X:      float32(region.X),
+								Y:      float32(region.Y),
+								Width:  float32(region.Width),
+								Height: float32(region.Height),
+							},
+							IsSheet: true,
+						})
+					}
+				}
+			}
+			sort.Slice(textures, func(i, j int) bool {
+				return textures[i].Name < textures[j].Name
+			})
+			return textures, nil
+		}
+	}
+	return nil, fmt.Errorf("scene not found: %s", sceneName)
 }
 
 func (rm *ResourceManager) GetFont(viewName string) (rl.Font, error) {
@@ -340,4 +420,104 @@ func (rm *ResourceManager) GetSprite(viewName, spriteName string) (rl.Texture2D,
 		}
 	}
 	return rl.Texture2D{}, Rectangle{}, fmt.Errorf("view not found: %s", viewName)
+}
+
+func (rm *ResourceManager) AddResource(sceneName string, resource Resource) error {
+	for i := range rm.Scenes {
+		if rm.Scenes[i].Name == sceneName {
+			view := &rm.Scenes[i]
+
+			if resource.IsSheet {
+				gridSize := resource.GridSize
+				if gridSize == 0 {
+					gridSize = DefaultGridSize
+				}
+				margin := resource.SheetMargin
+				if margin == 0 {
+					margin = DefaultMargin
+				}
+
+				spriteSheet := &SpriteSheet{
+					Name:     resource.Name,
+					Path:     resource.Path,
+					Sprites:  make(map[string]Rectangle),
+					GridSize: gridSize,
+					Margin:   margin,
+					Loaded:   false,
+				}
+
+				if len(resource.SheetData) == 0 {
+					tempTexture := rl.LoadTexture(resource.Path)
+					fileName := strings.TrimSuffix(filepath.Base(resource.Path), filepath.Ext(resource.Path))
+					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSize, margin)
+					rl.UnloadTexture(tempTexture)
+				}
+
+				for spriteName, pos := range resource.SheetData {
+					spriteSheet.Sprites[spriteName] = Rectangle{
+						X:      pos[0] * (gridSize + margin),
+						Y:      pos[1] * (gridSize + margin),
+						Width:  gridSize,
+						Height: gridSize,
+					}
+				}
+				view.SpriteSheets = append(view.SpriteSheets, spriteSheet)
+
+				// Load the sheet if the scene is currently loaded
+				if view.Loaded {
+					spriteSheet.Texture = rl.LoadTexture(spriteSheet.Path)
+					spriteSheet.Loaded = true
+				}
+			} else {
+				texture := Texture{
+					Name:   resource.Name,
+					Path:   resource.Path,
+					Loaded: false,
+				}
+				view.Textures = append(view.Textures, texture)
+
+				// Load the texture if the scene is currently loaded
+				if view.Loaded {
+					texture.Texture = rl.LoadTexture(texture.Path)
+					texture.Loaded = true
+					view.Textures[len(view.Textures)-1] = texture
+				}
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("scene not found: %s", sceneName)
+}
+
+func (rm *ResourceManager) RemoveResource(sceneName string, resourceName string) error {
+	for i := range rm.Scenes {
+		if rm.Scenes[i].Name == sceneName {
+			view := &rm.Scenes[i]
+
+			// Check and remove from regular textures
+			for j := range view.Textures {
+				if view.Textures[j].Name == resourceName {
+					if view.Textures[j].Loaded {
+						rl.UnloadTexture(view.Textures[j].Texture)
+					}
+					view.Textures = append(view.Textures[:j], view.Textures[j+1:]...)
+					return nil
+				}
+			}
+
+			// Check and remove from sprite sheets
+			for j := range view.SpriteSheets {
+				if view.SpriteSheets[j].Name == resourceName {
+					if view.SpriteSheets[j].Loaded {
+						rl.UnloadTexture(view.SpriteSheets[j].Texture)
+					}
+					view.SpriteSheets = append(view.SpriteSheets[:j], view.SpriteSheets[j+1:]...)
+					return nil
+				}
+			}
+
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+	}
+	return fmt.Errorf("scene not found: %s", sceneName)
 }

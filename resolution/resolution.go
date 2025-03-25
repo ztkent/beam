@@ -4,7 +4,6 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// width, height, tileSize
 type Resolution int
 
 const (
@@ -13,17 +12,17 @@ const (
 	Resolution1920x1080
 )
 
-var ResolutionOptions = map[Resolution][3]int32{
-	Resolution1280x800:  {1280, 800, 17},  // 16:10
-	Resolution1280x720:  {1280, 720, 17},  // 16:9
-	Resolution1920x1080: {1920, 1080, 24}, // 16:9
+var ResolutionOptions = map[Resolution][2]int32{
+	Resolution1280x800:  {1280, 800},  // 16:10
+	Resolution1280x720:  {1280, 720},  // 16:9
+	Resolution1920x1080: {1920, 1080}, // 16:9
 }
 
-func InitScreenAtResolution(res Resolution, title string) (int32, int32, int32) {
+func InitScreenAtResolution(res Resolution, title string) {
 	resOptions := ResolutionOptions[res]
 	rl.InitWindow(resOptions[0], resOptions[1], title)
 	rl.SetTargetFPS(60)
-	return resOptions[0], resOptions[1], resOptions[2]
+	return
 }
 
 func GetResolution() Resolution {
