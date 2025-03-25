@@ -66,6 +66,18 @@ type Resource struct {
 	GridSize    int32
 }
 
+type ResourceState struct {
+	Scenes []SceneState `json:"scenes"`
+}
+
+type SceneState struct {
+	Name         string     `json:"name"`
+	Textures     []Resource `json:"textures"`
+	SpriteSheets []Resource `json:"spriteSheets"`
+	Font         *Resource  `json:"font,omitempty"`
+	Loaded       bool       `json:"loaded"`
+}
+
 // NewResourceManagerWithGlobal creates a resource manager with a default view that's always loaded
 func NewResourceManagerWithGlobal(defaultTextures []Resource, defaultFont *Resource) *ResourceManager {
 	rm := &ResourceManager{
@@ -520,4 +532,99 @@ func (rm *ResourceManager) RemoveResource(sceneName string, resourceName string)
 		}
 	}
 	return fmt.Errorf("scene not found: %s", sceneName)
+}
+
+func (rm *ResourceManager) SaveState() ResourceState {
+	state := ResourceState{
+		Scenes: make([]SceneState, len(rm.Scenes)),
+	}
+
+	for i, scene := range rm.Scenes {
+		sceneState := SceneState{
+			Name:   scene.Name,
+			Loaded: scene.Loaded,
+		}
+
+		// Save textures
+		for _, tex := range scene.Textures {
+			sceneState.Textures = append(sceneState.Textures, Resource{
+				Name: tex.Name,
+				Path: tex.Path,
+			})
+		}
+
+		// Save sprite sheets
+		for _, sheet := range scene.SpriteSheets {
+			sheetData := make(map[string][]int32)
+			for name, rect := range sheet.Sprites {
+				sheetData[name] = []int32{rect.X / (sheet.GridSize + sheet.Margin), rect.Y / (sheet.GridSize + sheet.Margin)}
+			}
+			sceneState.SpriteSheets = append(sceneState.SpriteSheets, Resource{
+				Name:        sheet.Name,
+				Path:        sheet.Path,
+				IsSheet:     true,
+				SheetData:   sheetData,
+				SheetMargin: sheet.Margin,
+				GridSize:    sheet.GridSize,
+			})
+		}
+
+		// Save font if present
+		if scene.Font != nil {
+			sceneState.Font = &Resource{
+				Name: scene.Font.Name,
+				Path: scene.Font.Path,
+			}
+		}
+
+		state.Scenes[i] = sceneState
+	}
+
+	return state
+}
+
+func InitFromState(state ResourceState) *ResourceManager {
+	rm := &ResourceManager{
+		Scenes: make([]Scene, 0),
+	}
+
+	for _, sceneState := range state.Scenes {
+		var textureDefs []Resource
+
+		// Convert texture definitions
+		for _, tex := range sceneState.Textures {
+			textureDefs = append(textureDefs, Resource{
+				Name: tex.Name,
+				Path: tex.Path,
+			})
+		}
+
+		// Convert sprite sheet definitions
+		for _, sheet := range sceneState.SpriteSheets {
+			textureDefs = append(textureDefs, Resource{
+				Name:        sheet.Name,
+				Path:        sheet.Path,
+				IsSheet:     true,
+				SheetData:   sheet.SheetData,
+				SheetMargin: sheet.SheetMargin,
+				GridSize:    sheet.GridSize,
+			})
+		}
+
+		// Convert font definition
+		var fontDef *Resource
+		if sceneState.Font != nil {
+			fontDef = &Resource{
+				Name: sceneState.Font.Name,
+				Path: sceneState.Font.Path,
+			}
+		}
+
+		rm.AddScene(sceneState.Name, textureDefs, fontDef)
+		if sceneState.Loaded {
+			rm.LoadView(sceneState.Name)
+		}
+	}
+
+	return rm
 }
