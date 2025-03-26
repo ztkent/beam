@@ -321,6 +321,7 @@ func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo
 			for _, tex := range view.Textures {
 				if tex.Name == textureName && tex.Loaded {
 					return TextureInfo{
+						Name:    tex.Name,
 						Texture: tex.Texture,
 						Region: rl.Rectangle{
 							X:      0,
@@ -336,6 +337,7 @@ func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo
 			// If not found, check sprite sheets
 			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
 				return TextureInfo{
+					Name:    textureName,
 					Texture: tex,
 					Region: rl.Rectangle{
 						X:      float32(rect.X),
