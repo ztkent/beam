@@ -42,13 +42,12 @@ const (
 )
 
 type Map struct {
-	Width, Height  int
-	Tiles          [][]TileType
-	WallTextures   [][]string
-	FloorTextures  [][]string
-	FloorRotations [][]float64
-	Start          Position
-	Exit           Position
-	Respawn        Position
-	DungeonEntry   Position
+	Width, Height    int
+	Tiles            [][]TileType
+	Textures         [][][]string
+	TextureRotations [][][]float64
+	Start            Position
+	Exit             Position
+	Respawn          Position
+	DungeonEntry     Position
 }
