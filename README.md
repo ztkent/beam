@@ -1,22 +1,21 @@
 # Beam
-2D game engine tools written in Go using Raylib.
 
+2D Game Engine + Tools
 
-### Examples
-[Primo's Dungeon](https://github.com/ztkent/primos-dungeon) - 2D roguelike dungeon crawler.  
-[Spritesheet Viewer](https://github.com/ztkent/spritesheet-viewer) - Tool for viewing and inspecting sprite sheets.    
+## Features
 
-### Features
 - [x] Resource management
   - [x] Texture
   - [x] Font
   - [x] Sprite sheets
+  - [x] Supports specific texture, or can automatically add them all in order.
 - [x] Audio
   - [x] Sound
   - [x] Music
-- [x] Saved game support
+- [x] Saved Game Support
 - [x] Highscores
 
-### Sprite Sheets
-- [x] Sprite sheet loading
-- [x] Supports specific texture, or can automatically add them all in order.
+### Tools
+
+[Pixel Map Maker](https://github.com/ztkent/pixel-map-maker) - Tool for generating beam-compatible pixel maps.
+[Spritesheet Viewer](https://github.com/ztkent/spritesheet-viewer) - Tool for viewing and inspecting sprite sheets.
