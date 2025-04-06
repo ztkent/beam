@@ -1,0 +1,14 @@
+# TODO
+
+- remove spritesheets from the resource manager!
+- when first loading assets, pull them into a local cache (.cache)
+  - refer to the local cache for using
+- when saving/loading a project include their assets
+
+- Add layer button - we need to set walls
+- Add color picker
+- when loading a save, if we can not find a referenced asset, display a popup with the error
+        - allow the user to update the path
+
+- export it as a spritesheet
+- right click + hold to swap to pencil eraser (one layer erase)

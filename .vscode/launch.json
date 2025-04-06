@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+          "name": "mapmaker",
+          "type": "go",
+          "request": "launch",
+          "program": "${workspaceFolder}/tools/mapmaker/cmd",
+          "args": [],
+          "envFile": "${workspaceFolder}/.env"
+        },
+        {
+          "name": "view spritesheet",
+          "type": "go",
+          "request": "launch",
+          "program": "${workspaceFolder}/tools/spritesheet-viewer/cmd",
+          "args": [],
+          "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
