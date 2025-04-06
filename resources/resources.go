@@ -441,6 +441,24 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 		if rm.Scenes[i].Name == sceneName {
 			view := &rm.Scenes[i]
 
+			// Check for resource name conflicts, require a name if one if isn't provided
+			if resource.Name == "" {
+				return fmt.Errorf("resource name is required")
+			}
+			if resource.IsSheet {
+				for _, sheet := range view.SpriteSheets {
+					if sheet.Name == resource.Name {
+						return fmt.Errorf("SpriteSheet name conflict: %s. Name already exists.", resource.Name)
+					}
+				}
+			} else {
+				for _, tex := range view.Textures {
+					if tex.Name == resource.Name {
+						return fmt.Errorf("Texture name conflict: %s. Name already exists.", resource.Name)
+					}
+				}
+			}
+
 			if resource.IsSheet {
 				gridSize := resource.GridSize
 				if gridSize == 0 {
