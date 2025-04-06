@@ -1,15 +1,16 @@
 # Pixel Map Maker
 
-A 2D map editor, designed to create and edit game maps compatible with the Beam engine.
+2D Map Editor  
+Design, save, and export game maps compatible with the Beam engine.
 
 ## Features
 
 ### Map Creation
 
-- Grid-based map editor with resizable canvas
+- Grid-based tile editor with resizable canvas
 - Multiple resolution support with dynamic grid sizing
 - Real-time tile editing with multi-layer support
-- Advanced texture management with drag-and-drop capability
+- Advanced texture management, with a variety of editing tools
 
 ### Tools
 
