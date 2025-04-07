@@ -14,6 +14,7 @@ const (
 	StateHighScores
 )
 
+type Positions []Position
 type Position struct {
 	X, Y int
 }

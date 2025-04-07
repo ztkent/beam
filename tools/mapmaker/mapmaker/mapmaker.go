@@ -36,7 +36,6 @@ type Resolution struct {
 }
 
 type UIState struct {
-	selectedTile    string
 	tileSize        int
 	menuBarHeight   int
 	statusBarHeight int
@@ -59,15 +58,34 @@ type UIState struct {
 
 	// Recent Textures
 	recentTextures []string
+
+	// Resource Manage Mode
+	resourceManageMode bool
 }
 
 type TileGrid struct {
-	offset        beam.Position
-	selectedTiles []beam.Position
-	hasSelection  bool
+	offset               beam.Position // The offset of the grid in the window
+	hasSelection         bool
+	selectedTiles        beam.Positions   // These are the tiles that are selected by the user
+	missingResourceTiles MissingResources // This is every tile that has a texture, that is missing in the resource manager
 
 	// This is the actual map we will use in game with beam.
 	beam.Map
+}
+
+type MissingResources []MissingResource
+type MissingResource struct {
+	tile        beam.Position
+	textureName string
+}
+
+func (p MissingResources) Contains(pos beam.Position, texture string) bool {
+	for _, item := range p {
+		if item.tile == pos && item.textureName == texture {
+			return true
+		}
+	}
+	return false
 }
 
 const (
@@ -98,20 +116,21 @@ func NewMapMaker(width, height int32) *MapMaker {
 			title:  "2D Map Editor",
 		},
 		uiState: &UIState{
-			tileSize:        32,
-			menuBarHeight:   60,
-			statusBarHeight: 25,
-			resolutions:     resolutions,
-			currentResIndex: 0,
-			uiTextures:      make(map[string]rl.Texture2D),
-			activeTexture:   nil,
-			selectedTool:    "",
-			toast:           nil,
-			recentTextures:  make([]string, 0),
+			tileSize:           32,
+			menuBarHeight:      60,
+			statusBarHeight:    25,
+			resolutions:        resolutions,
+			currentResIndex:    0,
+			uiTextures:         make(map[string]rl.Texture2D),
+			activeTexture:      nil,
+			selectedTool:       "",
+			toast:              nil,
+			recentTextures:     make([]string, 0),
+			resourceManageMode: false,
 		},
 		tileGrid: &TileGrid{
 			offset:        beam.Position{X: 0, Y: 0},
-			selectedTiles: []beam.Position{{X: -1, Y: -1}},
+			selectedTiles: beam.Positions{{X: -1, Y: -1}},
 			hasSelection:  false,
 		},
 		currentFile: "",
@@ -148,7 +167,7 @@ func (m *MapMaker) Run() {
 			if rl.IsKeyPressed(rl.KeyEscape) {
 				if m.tileGrid.hasSelection {
 					m.tileGrid.hasSelection = false
-					m.tileGrid.selectedTiles = []beam.Position{}
+					m.tileGrid.selectedTiles = beam.Positions{}
 					continue
 				}
 			} else {
@@ -257,7 +276,6 @@ func (m *MapMaker) update() {
 			m.uiState.currentResIndex = 0
 			m.uiState.tileSize = 32
 			m.showResourceViewer = false
-			m.uiState.selectedTile = ""
 			m.uiState.resourceViewerScroll = 0
 			m.currentFile = ""
 			rl.SetWindowTitle(m.window.title)
@@ -305,7 +323,7 @@ func (m *MapMaker) update() {
 		} else {
 			m.uiState.selectedTool = "select"
 			m.tileGrid.hasSelection = false
-			m.tileGrid.selectedTiles = []beam.Position{}
+			m.tileGrid.selectedTiles = beam.Positions{}
 			m.showToast("Select tool selected", ToastInfo)
 		}
 	}
@@ -341,7 +359,7 @@ func (m *MapMaker) update() {
 			if m.uiState.selectedTool == "paintbucket" {
 				m.tileGrid.selectedTiles = m.floodFillSelection(gridX, gridY)
 			} else {
-				m.tileGrid.selectedTiles = []beam.Position{{X: gridX, Y: gridY}}
+				m.tileGrid.selectedTiles = beam.Positions{{X: gridX, Y: gridY}}
 			}
 			m.tileGrid.hasSelection = true
 		}

@@ -97,8 +97,8 @@ func (m *MapMaker) isIconButtonClicked(btn IconButton) bool {
 	return rl.CheckCollisionPointRec(rl.GetMousePosition(), btn.rect) && rl.IsMouseButtonPressed(rl.MouseLeftButton)
 }
 
-func (m *MapMaker) floodFillSelection(startX, startY int) []beam.Position {
-	result := make([]beam.Position, 0)
+func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
+	result := make(beam.Positions, 0)
 	if startX < 0 || startX >= m.tileGrid.Width || startY < 0 || startY >= m.tileGrid.Height {
 		return result
 	}
@@ -110,7 +110,7 @@ func (m *MapMaker) floodFillSelection(startX, startY int) []beam.Position {
 	visited := make(map[string]bool)
 
 	// Stack for flood fill
-	stack := []beam.Position{{X: startX, Y: startY}}
+	stack := beam.Positions{{X: startX, Y: startY}}
 
 	// Check if two tiles have the same texture pattern
 	matchesPattern := func(x, y int) bool {
@@ -147,7 +147,7 @@ func (m *MapMaker) floodFillSelection(startX, startY int) []beam.Position {
 		result = append(result, current)
 
 		// Check all 4 directions
-		directions := []beam.Position{
+		directions := beam.Positions{
 			{X: current.X + 1, Y: current.Y}, // right
 			{X: current.X - 1, Y: current.Y}, // left
 			{X: current.X, Y: current.Y + 1}, // down

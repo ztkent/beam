@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/ztkent/beam"
 )
 
 func (m *MapMaker) renderGrid() {
@@ -33,7 +34,8 @@ func (m *MapMaker) renderGrid() {
 			// Draw all textures at this location, in order
 			for i, textureName := range m.tileGrid.Textures[y][x] {
 				rotateFloor := float64(m.tileGrid.TextureRotations[y][x][i])
-				m.renderGridTile(pos, textureName, rotateFloor)
+				tile := beam.Position{X: x, Y: y}
+				m.renderGridTile(pos, tile, textureName, rotateFloor)
 			}
 		}
 	}
@@ -71,14 +73,12 @@ func (m *MapMaker) renderGrid() {
 	rl.DrawText(dimensions, int32(textX), int32(textY), 20, rl.DarkGray)
 }
 
-func (m *MapMaker) renderGridTile(pos rl.Rectangle, textureName string, rotate float64) {
+func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureName string, rotate float64) {
 	if textureName == "" {
 		return
-	}
-
-	info, err := m.resources.GetTexture("default", textureName)
-	if err != nil {
-		fmt.Println("Error getting texture:", err)
+	} else if m.tileGrid.missingResourceTiles.Contains(tile, textureName) {
+		// Draw yellow outline for missing resource
+		rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
 		return
 	}
 
@@ -86,6 +86,12 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, textureName string, rotate f
 	origin := rl.Vector2{
 		X: float32(m.uiState.tileSize) / 2,
 		Y: float32(m.uiState.tileSize) / 2,
+	}
+
+	info, err := m.resources.GetTexture("default", textureName)
+	if err != nil {
+		fmt.Println("Error getting texture:", err)
+		return
 	}
 
 	// Adjust destination rectangle to use center-based rotation
@@ -359,9 +365,19 @@ func (m *MapMaker) renderResourceViewer() {
 		Height: float32(dialogHeight),
 	}, 1, rl.Gray)
 
-	// Title section
+	// Title section and heading buttons
 	titleHeight := 50
 	rl.DrawText("Loaded Resources", int32(dialogX+20), int32(dialogY+20), 20, rl.Black)
+
+	// Add manage button
+	manageBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 120),
+		Y:      float32(dialogY + 10),
+		Width:  70,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(manageBtn, rl.LightGray)
+	rl.DrawText("Manage", int32(manageBtn.X+10), int32(manageBtn.Y+8), 16, rl.Black)
 
 	// Close button
 	closeBtn := rl.Rectangle{
@@ -376,6 +392,11 @@ func (m *MapMaker) renderResourceViewer() {
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		m.showResourceViewer = false
 		return
+	}
+
+	// Toggle manage mode when manage button is clicked
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), manageBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.resourceManageMode = !m.uiState.resourceManageMode
 	}
 
 	// Setup scrollable content area
@@ -403,8 +424,10 @@ func (m *MapMaker) renderResourceViewer() {
 	)
 
 	// Calculate content bounds
-	textures, _ := m.resources.GetAllTextures("default")
-	totalRows := (len(textures) + itemsPerRow - 1) / itemsPerRow
+	ss, _ := m.resources.GetAllSpritesheets("default")
+	textures, _ := m.resources.GetAllTextures("default", false)
+
+	totalRows := (len(textures) + len(ss) + itemsPerRow - 1) / itemsPerRow
 	contentHeight := totalRows*int(itemTotalWidth) + int(bottomMargin)
 
 	// Clamp scroll
@@ -427,86 +450,125 @@ func (m *MapMaker) renderResourceViewer() {
 		int32(contentArea.Height-20),
 	)
 
-	// Draw textures
-	startY := dialogY + titleHeight - m.uiState.resourceViewerScroll
-	startX := dialogX + leftMargin
+	if m.uiState.resourceManageMode {
+		// Draw manage mode view
+		itemHeight := int32(40)
+		padding := int32(10)
+		for i, texInfo := range ss {
+			y := int32(dialogY+titleHeight+i*int(itemHeight)) - int32(m.uiState.resourceViewerScroll)
+			itemRect := rl.Rectangle{
+				X:      float32(int32(dialogX) + padding),
+				Y:      float32(y),
+				Width:  float32(int32(dialogWidth) - padding*3),
+				Height: float32(itemHeight - padding),
+			}
+			// Skip if item is outside visible area
+			if y+itemHeight < int32(dialogY+titleHeight) || y > int32(dialogY+dialogHeight) {
+				continue
+			}
+			// Draw item background
+			rl.DrawRectangleRec(itemRect, rl.LightGray)
+			// Draw texture name
+			rl.DrawText(texInfo.Name, int32(itemRect.X+10), int32(itemRect.Y+8), 16, rl.Black)
+			// Draw delete button
+			deleteBtn := rl.Rectangle{
+				X:      itemRect.X + itemRect.Width - 60,
+				Y:      itemRect.Y + 2,
+				Width:  50,
+				Height: 26,
+			}
+			rl.DrawRectangleRec(deleteBtn, rl.Red)
+			rl.DrawText("Delete", int32(deleteBtn.X+6), int32(deleteBtn.Y+6), 14, rl.White)
+			// Handle delete button click
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				err := m.resources.RemoveResource("default", texInfo.Name)
+				if err != nil {
+					fmt.Println("Error removing resource:", err)
+				}
+			}
+		}
+	} else {
+		// Draw normal grid view
+		startY := dialogY + titleHeight - m.uiState.resourceViewerScroll
+		startX := dialogX + leftMargin
 
-	for i, texInfo := range textures {
-		col := i % itemsPerRow
-		row := i / itemsPerRow
-		x := startX + col*int(itemTotalWidth)
-		y := startY + row*itemTotalWidth
+		for i, texInfo := range textures {
+			col := i % itemsPerRow
+			row := i / itemsPerRow
+			x := startX + col*int(itemTotalWidth)
+			y := startY + row*itemTotalWidth
 
-		// Draw texture preview background
-		rl.DrawRectangle(int32(x), int32(y), previewSize, previewSize, rl.LightGray)
+			// Draw texture preview background
+			rl.DrawRectangle(int32(x), int32(y), previewSize, previewSize, rl.LightGray)
 
-		// Draw the texture
-		if texInfo.IsSheet {
-			rl.DrawTexturePro(
-				texInfo.Texture,
-				texInfo.Region,
-				rl.Rectangle{
-					X:      float32(x),
-					Y:      float32(y),
-					Width:  float32(previewSize),
-					Height: float32(previewSize),
-				},
-				rl.Vector2{X: 0, Y: 0},
-				0,
-				rl.White,
-			)
-		} else {
-			scale := float32(previewSize) / float32(texInfo.Texture.Width)
-			if float32(texInfo.Texture.Height)*scale > float32(previewSize) {
-				scale = float32(previewSize) / float32(texInfo.Texture.Height)
+			// Draw the texture
+			if texInfo.IsSheet {
+				rl.DrawTexturePro(
+					texInfo.Texture,
+					texInfo.Region,
+					rl.Rectangle{
+						X:      float32(x),
+						Y:      float32(y),
+						Width:  float32(previewSize),
+						Height: float32(previewSize),
+					},
+					rl.Vector2{X: 0, Y: 0},
+					0,
+					rl.White,
+				)
+			} else {
+				scale := float32(previewSize) / float32(texInfo.Texture.Width)
+				if float32(texInfo.Texture.Height)*scale > float32(previewSize) {
+					scale = float32(previewSize) / float32(texInfo.Texture.Height)
+				}
+
+				width := float32(texInfo.Texture.Width) * scale
+				height := float32(texInfo.Texture.Height) * scale
+				offsetX := (float32(previewSize) - width) / 2
+				offsetY := (float32(previewSize) - height) / 2
+
+				rl.DrawTexturePro(
+					texInfo.Texture,
+					rl.Rectangle{
+						X:      0,
+						Y:      0,
+						Width:  float32(texInfo.Texture.Width),
+						Height: float32(texInfo.Texture.Height),
+					},
+					rl.Rectangle{
+						X:      float32(x) + offsetX,
+						Y:      float32(y) + offsetY,
+						Width:  width,
+						Height: height,
+					},
+					rl.Vector2{X: 0, Y: 0},
+					0,
+					rl.White,
+				)
 			}
 
-			width := float32(texInfo.Texture.Width) * scale
-			height := float32(texInfo.Texture.Height) * scale
-			offsetX := (float32(previewSize) - width) / 2
-			offsetY := (float32(previewSize) - height) / 2
+			// After drawing the texture preview, add click handling
+			clickArea := rl.Rectangle{
+				X:      float32(x),
+				Y:      float32(y),
+				Width:  previewSize,
+				Height: previewSize,
+			}
 
-			rl.DrawTexturePro(
-				texInfo.Texture,
-				rl.Rectangle{
-					X:      0,
-					Y:      0,
-					Width:  float32(texInfo.Texture.Width),
-					Height: float32(texInfo.Texture.Height),
-				},
-				rl.Rectangle{
-					X:      float32(x) + offsetX,
-					Y:      float32(y) + offsetY,
-					Width:  width,
-					Height: height,
-				},
-				rl.Vector2{X: 0, Y: 0},
-				0,
-				rl.White,
-			)
-		}
+			// Highlight active texture
+			if m.uiState.activeTexture != nil && m.uiState.activeTexture.Name == texInfo.Name {
+				rl.DrawRectangleLinesEx(clickArea, 2, rl.Blue)
+			}
 
-		// After drawing the texture preview, add click handling
-		clickArea := rl.Rectangle{
-			X:      float32(x),
-			Y:      float32(y),
-			Width:  previewSize,
-			Height: previewSize,
-		}
-
-		// Highlight active texture
-		if m.uiState.activeTexture != nil && m.uiState.activeTexture.Name == texInfo.Name {
-			rl.DrawRectangleLinesEx(clickArea, 2, rl.Blue)
-		}
-
-		if rl.CheckCollisionPointRec(rl.GetMousePosition(), clickArea) &&
-			rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-			tex, err := m.resources.GetTexture("default", texInfo.Name)
-			if err != nil {
-				fmt.Println("Error getting texture:", err)
-			} else {
-				m.handleTextureSelect(&tex)
-				m.showResourceViewer = false
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), clickArea) &&
+				rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				tex, err := m.resources.GetTexture("default", texInfo.Name)
+				if err != nil {
+					fmt.Println("Error getting texture:", err)
+				} else {
+					m.handleTextureSelect(&tex)
+					m.showResourceViewer = false
+				}
 			}
 		}
 	}
@@ -582,7 +644,16 @@ func (m *MapMaker) renderTileInfoPopup() {
 
 	for i, tex := range textures {
 		rotation := rotations[i]
-		rl.DrawText(fmt.Sprintf("- %s (%.1f°)", tex, rotation), m.uiState.tileInfoPopupX+padding+10, textY, 14, rl.DarkGray)
+		warningText := ""
+		textColor := rl.DarkGray
+
+		if m.tileGrid.missingResourceTiles.Contains(pos, tex) {
+			warningText = " !"
+			textColor = rl.Yellow
+		}
+
+		rl.DrawText(fmt.Sprintf("- %s (%.1f°)%s", tex, rotation, warningText),
+			m.uiState.tileInfoPopupX+padding+10, textY, 14, textColor)
 		textY += 20
 	}
 

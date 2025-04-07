@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/ztkent/beam"
 	"github.com/ztkent/beam/resources"
 )
 
@@ -144,9 +145,28 @@ func (m *MapMaker) LoadMap(filename string) error {
 		rl.SetWindowTitle(m.window.title)
 	}
 
+	// Validate the tile grid to ensure all textures are loaded, if not add to missing list
+	m.ValidateTileGrid()
 	return nil
 }
 
+func (m *MapMaker) ValidateTileGrid() error {
+	// Clear the missing resource tiles list
+	newGrid := make(MissingResources, 0)
+	// Scan the grid, and make sure that any referenced textures are loaded.
+	// If we cant find them, add them to the missing textures list.
+	for y, textureY := range m.tileGrid.Textures {
+		for x, textureX := range textureY {
+			for _, texture := range textureX {
+				if _, err := m.resources.GetTexture("default", texture); err != nil {
+					newGrid = append(newGrid, MissingResource{tile: beam.Position{X: x, Y: y}, textureName: texture})
+				}
+			}
+		}
+	}
+	m.tileGrid.missingResourceTiles = newGrid
+	return nil
+}
 func openLoadDialog() string {
 	var cmd *exec.Cmd
 

@@ -355,7 +355,7 @@ func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo
 	return TextureInfo{}, fmt.Errorf("view not found: %s", viewName)
 }
 
-func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, error) {
+func (rm *ResourceManager) GetAllTextures(sceneName string, ignoreSheetTextures bool) ([]TextureInfo, error) {
 	for _, scene := range rm.Scenes {
 		if scene.Name == sceneName {
 			var textures []TextureInfo
@@ -378,20 +378,22 @@ func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, erro
 			}
 
 			// Add sprite sheet entries
-			for _, sheet := range scene.SpriteSheets {
-				if sheet.Loaded {
-					for name, region := range sheet.Sprites {
-						textures = append(textures, TextureInfo{
-							Name:    name,
-							Texture: sheet.Texture,
-							Region: rl.Rectangle{
-								X:      float32(region.X),
-								Y:      float32(region.Y),
-								Width:  float32(region.Width),
-								Height: float32(region.Height),
-							},
-							IsSheet: true,
-						})
+			if !ignoreSheetTextures {
+				for _, sheet := range scene.SpriteSheets {
+					if sheet.Loaded {
+						for name, region := range sheet.Sprites {
+							textures = append(textures, TextureInfo{
+								Name:    name,
+								Texture: sheet.Texture,
+								Region: rl.Rectangle{
+									X:      float32(region.X),
+									Y:      float32(region.Y),
+									Width:  float32(region.Width),
+									Height: float32(region.Height),
+								},
+								IsSheet: true,
+							})
+						}
 					}
 				}
 			}
@@ -399,6 +401,28 @@ func (rm *ResourceManager) GetAllTextures(sceneName string) ([]TextureInfo, erro
 				return textures[i].Name < textures[j].Name
 			})
 			return textures, nil
+		}
+	}
+	return nil, fmt.Errorf("scene not found: %s", sceneName)
+}
+
+func (rm *ResourceManager) GetAllSpritesheets(sceneName string) ([]SpriteSheet, error) {
+	for _, scene := range rm.Scenes {
+		if scene.Name == sceneName {
+			var sheets []SpriteSheet
+
+			// Add sprite sheet entries
+			for _, sheet := range scene.SpriteSheets {
+				if sheet.Loaded {
+					sheets = append(sheets, *sheet)
+				}
+			}
+
+			// Sort by name
+			sort.Slice(sheets, func(i, j int) bool {
+				return sheets[i].Name < sheets[j].Name
+			})
+			return sheets, nil
 		}
 	}
 	return nil, fmt.Errorf("scene not found: %s", sceneName)
