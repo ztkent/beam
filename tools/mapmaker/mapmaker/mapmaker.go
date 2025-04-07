@@ -61,6 +61,12 @@ type UIState struct {
 
 	// Resource Manage Mode
 	resourceManageMode bool
+
+	// Track long right click for tool swap
+	rightClickStartTime float64
+
+	// Eraser Tool Swap
+	hasSwappedEraser bool
 }
 
 type TileGrid struct {
@@ -154,6 +160,7 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["paintbrush"] = rl.LoadTexture("../assets/paintbrush.png")
 	m.uiState.uiTextures["paintbucket"] = rl.LoadTexture("../assets/paintbucket.png")
 	m.uiState.uiTextures["eraser"] = rl.LoadTexture("../assets/eraser.png")
+	m.uiState.uiTextures["pencileraser"] = rl.LoadTexture("../assets/pencileraser.png")
 	m.uiState.uiTextures["select"] = rl.LoadTexture("../assets/select.png")
 
 	m.resources = resources.NewResourceManager()
@@ -310,11 +317,16 @@ func (m *MapMaker) update() {
 		}
 	}
 	if m.isIconButtonClicked(eraseBtn) {
-		if m.uiState.selectedTool == "eraser" {
+		if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
 			m.uiState.selectedTool = ""
 		} else {
-			m.uiState.selectedTool = "eraser"
-			m.showToast("Eraser tool selected", ToastInfo)
+			name := "eraser"
+			// Use pencileraser if swapped
+			if m.uiState.hasSwappedEraser {
+				name = "pencileraser"
+			}
+			m.uiState.selectedTool = name
+			m.showToast(name+" tool selected", ToastInfo)
 		}
 	}
 	if m.isIconButtonClicked(selectBtn) {
@@ -326,6 +338,26 @@ func (m *MapMaker) update() {
 			m.tileGrid.selectedTiles = beam.Positions{}
 			m.showToast("Select tool selected", ToastInfo)
 		}
+	}
+
+	// Handle eraser tool swap
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		if m.uiState.rightClickStartTime == 0 {
+			m.uiState.rightClickStartTime = rl.GetTime()
+		} else if rl.GetTime()-m.uiState.rightClickStartTime > 0.5 {
+			// Swap eraser with pencileraser
+			m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
+				m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
+			if m.uiState.selectedTool == "eraser" {
+				m.uiState.selectedTool = "pencileraser"
+			} else if m.uiState.selectedTool == "pencileraser" {
+				m.uiState.selectedTool = "eraser"
+			}
+			m.uiState.hasSwappedEraser = !m.uiState.hasSwappedEraser
+			m.uiState.rightClickStartTime = 0
+		}
+	} else {
+		m.uiState.rightClickStartTime = 0
 	}
 
 	// Center the grid in the window
@@ -367,7 +399,8 @@ func (m *MapMaker) update() {
 
 		// Allow drag selection for some tools
 		if m.uiState.selectedTool == "paintbrush" ||
-			m.uiState.selectedTool == "eraser" {
+			m.uiState.selectedTool == "eraser" ||
+			m.uiState.selectedTool == "pencileraser" {
 			if gridX >= 0 && gridX < m.tileGrid.Width &&
 				gridY >= 0 && gridY < m.tileGrid.Height &&
 				mousePos.Y > float32(m.uiState.menuBarHeight) {
@@ -428,6 +461,15 @@ func (m *MapMaker) update() {
 					m.tileGrid.Tiles[selectedY][selectedX] = tileType
 					m.tileGrid.Textures[selectedY][selectedX] = make([]string, 0)
 					m.tileGrid.TextureRotations[selectedY][selectedX] = make([]float64, 0)
+				}
+			case "pencileraser":
+				for _, pos := range m.tileGrid.selectedTiles {
+					selectedX := int(pos.X)
+					selectedY := int(pos.Y)
+					if len(m.tileGrid.Textures[selectedY][selectedX]) > 0 {
+						m.tileGrid.Textures[selectedY][selectedX] = m.tileGrid.Textures[selectedY][selectedX][:len(m.tileGrid.Textures[selectedY][selectedX])-1]
+						m.tileGrid.TextureRotations[selectedY][selectedX] = m.tileGrid.TextureRotations[selectedY][selectedX][:len(m.tileGrid.TextureRotations[selectedY][selectedX])-1]
+					}
 				}
 			case "select":
 				if !m.showTileInfo {

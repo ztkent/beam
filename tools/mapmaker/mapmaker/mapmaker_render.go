@@ -166,10 +166,11 @@ func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, select
 
 	// Draw tools with selection highlight
 	toolButtons := map[string]IconButton{
-		"paintbrush":  paintbrushBtn,
-		"paintbucket": paintbucketBtn,
-		"eraser":      eraseBtn,
-		"select":      selectBtn,
+		"paintbrush":   paintbrushBtn,
+		"paintbucket":  paintbucketBtn,
+		"eraser":       eraseBtn,
+		"pencileraser": eraseBtn,
+		"select":       selectBtn,
 	}
 	for toolName, btn := range toolButtons {
 		if m.uiState.selectedTool == toolName {
