@@ -525,7 +525,7 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	if err != nil {
 		return err
 	}
-
+	m.ValidateTileGrid()
 	return nil
 }
 

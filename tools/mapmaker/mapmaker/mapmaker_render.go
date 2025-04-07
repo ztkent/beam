@@ -278,7 +278,11 @@ func (m *MapMaker) renderActiveTexturePreview() {
 		}, 1, rl.Gray)
 
 		// Draw recent textures
-		for i, texName := range m.uiState.recentTextures {
+		i := 0
+		for _, texName := range m.uiState.recentTextures {
+			if _, err := m.resources.GetTexture("default", texName); err != nil {
+				continue
+			}
 			itemY := popupY + padding + int32(i)*itemHeight
 			itemRect := rl.Rectangle{
 				X:      float32(popupX + padding),
@@ -323,6 +327,7 @@ func (m *MapMaker) renderActiveTexturePreview() {
 					10,
 					rl.Black)
 			}
+			i++
 		}
 
 		// Close popup when clicking outside
@@ -485,6 +490,7 @@ func (m *MapMaker) renderResourceViewer() {
 				if err != nil {
 					fmt.Println("Error removing resource:", err)
 				}
+				m.ValidateTileGrid()
 			}
 		}
 	} else {
