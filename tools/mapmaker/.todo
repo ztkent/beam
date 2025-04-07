@@ -1,12 +1,13 @@
 # TODO
 
-- remove spritesheets from the resource manager!
+- Add layer button - we need to set walls, playerspawn, dungeonentrance, etc
+- Add color picker - alternative to texture
+
+- fix resource viewer scroll
 - when first loading assets, pull them into a local cache (.cache)
   - refer to the local cache for using
 - when saving/loading a project include their assets
 
-- Add layer button - we need to set walls
-- Add color picker
 - when loading a save, if we can not find a referenced asset, display a popup with the error
         - allow the user to update the path
 
