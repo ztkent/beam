@@ -377,13 +377,13 @@ func (m *MapMaker) renderResourceViewer() {
 
 	// Add manage button
 	manageBtn := rl.Rectangle{
-		X:      float32(dialogX + dialogWidth - 120),
+		X:      float32(dialogX + dialogWidth - 115),
 		Y:      float32(dialogY + 10),
 		Width:  70,
 		Height: 30,
 	}
 	rl.DrawRectangleRec(manageBtn, rl.LightGray)
-	rl.DrawText("Manage", int32(manageBtn.X+10), int32(manageBtn.Y+8), 16, rl.Black)
+	rl.DrawText("Manage", int32(manageBtn.X+8), int32(manageBtn.Y+8), 16, rl.Black)
 
 	// Close button
 	closeBtn := rl.Rectangle{
@@ -484,7 +484,7 @@ func (m *MapMaker) renderResourceViewer() {
 				Height: 26,
 			}
 			rl.DrawRectangleRec(deleteBtn, rl.Red)
-			rl.DrawText("Delete", int32(deleteBtn.X+6), int32(deleteBtn.Y+6), 14, rl.White)
+			rl.DrawText("Delete", int32(deleteBtn.X+5), int32(deleteBtn.Y+6), 14, rl.White)
 			// Handle delete button click
 			if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 				err := m.resources.RemoveResource("default", texInfo.Name)
