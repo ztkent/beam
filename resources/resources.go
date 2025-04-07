@@ -216,8 +216,8 @@ func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteS
 		sheetName = name
 	}
 	sheetData := make(map[string][]int32)
-	cols := (texture.Width) / (spriteSize + margin)
-	rows := (texture.Height) / (spriteSize + margin)
+	cols := (texture.Width)/(spriteSize+margin) + 1
+	rows := (texture.Height)/(spriteSize+margin) + 1
 	for row := int32(0); row < rows; row++ {
 		for col := int32(0); col < cols; col++ {
 			spriteName := fmt.Sprintf("%s_%d_%d", sheetName, row, col)
