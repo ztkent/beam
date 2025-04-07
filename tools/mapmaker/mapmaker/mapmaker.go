@@ -67,6 +67,9 @@ type UIState struct {
 
 	// Eraser Tool Swap
 	hasSwappedEraser bool
+
+	// Layers Tool Swap
+	hasSwappedLayers bool
 }
 
 type TileGrid struct {
@@ -133,6 +136,8 @@ func NewMapMaker(width, height int32) *MapMaker {
 			toast:              nil,
 			recentTextures:     make([]string, 0),
 			resourceManageMode: false,
+			hasSwappedEraser:   false,
+			hasSwappedLayers:   false,
 		},
 		tileGrid: &TileGrid{
 			offset:        beam.Position{X: 0, Y: 0},
@@ -162,6 +167,9 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["eraser"] = rl.LoadTexture("../assets/eraser.png")
 	m.uiState.uiTextures["pencileraser"] = rl.LoadTexture("../assets/pencileraser.png")
 	m.uiState.uiTextures["select"] = rl.LoadTexture("../assets/select.png")
+	m.uiState.uiTextures["layerwall"] = rl.LoadTexture("../assets/wall.png")
+	m.uiState.uiTextures["layerground"] = rl.LoadTexture("../assets/soil.png")
+	m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
 
 	m.resources = resources.NewResourceManager()
 	m.initTileGrid()
@@ -204,7 +212,7 @@ func (m *MapMaker) Run() {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn := m.getUIButtons()
 
 	if m.isButtonClicked(tileSmallerBtn) {
 		if m.uiState.tileSize > 8 {
@@ -339,21 +347,41 @@ func (m *MapMaker) update() {
 			m.showToast("Select tool selected", ToastInfo)
 		}
 	}
+	if m.isIconButtonClicked(layersBtn) {
+		if m.uiState.selectedTool == "layers" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "layers"
+			m.showToast("Layers tool selected", ToastInfo)
+		}
+	}
 
-	// Handle eraser tool swap
+	// Handle tool swaps
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
 		if m.uiState.rightClickStartTime == 0 {
 			m.uiState.rightClickStartTime = rl.GetTime()
 		} else if rl.GetTime()-m.uiState.rightClickStartTime > 0.5 {
-			// Swap eraser with pencileraser
-			m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
-				m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
-			if m.uiState.selectedTool == "eraser" {
-				m.uiState.selectedTool = "pencileraser"
-			} else if m.uiState.selectedTool == "pencileraser" {
-				m.uiState.selectedTool = "eraser"
+			// Handle eraser swap
+			if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
+				m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
+					m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
+				if m.uiState.selectedTool == "eraser" {
+					m.uiState.selectedTool = "pencileraser"
+				} else {
+					m.uiState.selectedTool = "eraser"
+				}
+				m.uiState.hasSwappedEraser = !m.uiState.hasSwappedEraser
 			}
-			m.uiState.hasSwappedEraser = !m.uiState.hasSwappedEraser
+
+			// Handle layers swap
+			if m.uiState.selectedTool == "layers" {
+				m.uiState.hasSwappedLayers = !m.uiState.hasSwappedLayers
+				if m.uiState.hasSwappedLayers {
+					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerwall"]
+				} else {
+					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
+				}
+			}
 			m.uiState.rightClickStartTime = 0
 		}
 	} else {
@@ -400,7 +428,8 @@ func (m *MapMaker) update() {
 		// Allow drag selection for some tools
 		if m.uiState.selectedTool == "paintbrush" ||
 			m.uiState.selectedTool == "eraser" ||
-			m.uiState.selectedTool == "pencileraser" {
+			m.uiState.selectedTool == "pencileraser" ||
+			m.uiState.selectedTool == "layers" {
 			if gridX >= 0 && gridX < m.tileGrid.Width &&
 				gridY >= 0 && gridY < m.tileGrid.Height &&
 				mousePos.Y > float32(m.uiState.menuBarHeight) {
@@ -480,6 +509,9 @@ func (m *MapMaker) update() {
 					m.showTileInfo = true
 					m.uiState.tileInfoPos = pos
 				}
+			case "layers":
+				// TODO:layers tools, set wall/floor tiles
+				break
 			}
 		}
 	}
@@ -571,7 +603,7 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn IconButton) {
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn IconButton) {
 	// Tile size controls (top row)
 	tileSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	tileLargerBtn = m.NewButton(85, 8, 30, 20, "+")
@@ -660,6 +692,16 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn 
 		m.uiState.uiTextures["select"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["select"].Width), Height: float32(m.uiState.uiTextures["select"].Height)},
 		"Select",
+	)
+
+	layersBtn = m.NewIconButton(
+		370,
+		15,
+		40,
+		30,
+		m.uiState.uiTextures["layers"],
+		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["layers"].Width), Height: float32(m.uiState.uiTextures["layers"].Height)},
+		"Layers",
 	)
 
 	return
