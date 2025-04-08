@@ -110,6 +110,10 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureN
 		float32(rotate),
 		rl.White,
 	)
+
+	if m.tileGrid.Tiles[tile.Y][tile.X] == beam.WallTile {
+		rl.DrawRectangleLinesEx(pos, 2, rl.Brown)
+	}
 }
 
 func (m *MapMaker) renderUI() {

@@ -510,7 +510,15 @@ func (m *MapMaker) update() {
 					m.uiState.tileInfoPos = pos
 				}
 			case "layers":
-				// TODO:layers tools, set wall/floor tiles
+				for _, pos := range m.tileGrid.selectedTiles {
+					selectedX := int(pos.X)
+					selectedY := int(pos.Y)
+					tileType := beam.TileType(1) // Ground
+					if m.uiState.hasSwappedLayers {
+						tileType = beam.TileType(0) // Wall
+					}
+					m.tileGrid.Tiles[selectedY][selectedX] = tileType
+				}
 				break
 			}
 		}
