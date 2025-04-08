@@ -70,6 +70,9 @@ type UIState struct {
 
 	// Layers Tool Swap
 	hasSwappedLayers bool
+
+	// Location Tool Mode
+	locationMode int
 }
 
 type TileGrid struct {
@@ -136,8 +139,10 @@ func NewMapMaker(width, height int32) *MapMaker {
 			toast:              nil,
 			recentTextures:     make([]string, 0),
 			resourceManageMode: false,
-			hasSwappedEraser:   false,
-			hasSwappedLayers:   false,
+
+			hasSwappedEraser: false,
+			hasSwappedLayers: false,
+			locationMode:     0,
 		},
 		tileGrid: &TileGrid{
 			offset:        beam.Position{X: 0, Y: 0},
@@ -170,6 +175,7 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["layerwall"] = rl.LoadTexture("../assets/wall.png")
 	m.uiState.uiTextures["layerground"] = rl.LoadTexture("../assets/soil.png")
 	m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
+	m.uiState.uiTextures["location"] = rl.LoadTexture("../assets/location.png")
 
 	m.resources = resources.NewResourceManager()
 	m.initTileGrid()
@@ -212,7 +218,7 @@ func (m *MapMaker) Run() {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
 	if m.isButtonClicked(tileSmallerBtn) {
 		if m.uiState.tileSize > 8 {
@@ -355,6 +361,14 @@ func (m *MapMaker) update() {
 			m.showToast("Layers tool selected", ToastInfo)
 		}
 	}
+	if m.isIconButtonClicked(locationBtn) {
+		if m.uiState.selectedTool == "location" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "location"
+			m.showToast("Location tool selected", ToastInfo)
+		}
+	}
 
 	// Handle tool swaps
 	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
@@ -382,6 +396,14 @@ func (m *MapMaker) update() {
 					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
 				}
 			}
+
+			// Handle location swap
+			if m.uiState.selectedTool == "location" {
+				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4 // Cycle through 4 states
+				modeNames := []string{"Player Start", "Dungeon Entrance", "Respawn", "Exit"}
+				m.showToast(fmt.Sprintf("Location Mode: %s", modeNames[m.uiState.locationMode]), ToastInfo)
+			}
+
 			m.uiState.rightClickStartTime = 0
 		}
 	} else {
@@ -520,6 +542,20 @@ func (m *MapMaker) update() {
 					m.tileGrid.Tiles[selectedY][selectedX] = tileType
 				}
 				break
+			case "location":
+				for _, tile := range m.tileGrid.selectedTiles {
+					switch m.uiState.locationMode {
+					case 0:
+						m.tileGrid.Start = tile
+					case 1:
+						m.tileGrid.DungeonEntry = tile
+					case 2:
+						m.tileGrid.Respawn = tile
+					case 3:
+						m.tileGrid.Exit = tile
+					}
+				}
+				break
 			}
 		}
 	}
@@ -611,7 +647,7 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn IconButton) {
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
 	// Tile size controls (top row)
 	tileSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	tileLargerBtn = m.NewButton(85, 8, 30, 20, "+")
@@ -710,6 +746,26 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn 
 		m.uiState.uiTextures["layers"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["layers"].Width), Height: float32(m.uiState.uiTextures["layers"].Height)},
 		"Layers",
+	)
+
+	locationTooltip := "Player Start"
+	switch m.uiState.locationMode {
+	case 1:
+		locationTooltip = "Dungeon Entrance"
+	case 2:
+		locationTooltip = "Respawn"
+	case 3:
+		locationTooltip = "Exit"
+	}
+
+	locationBtn = m.NewIconButton(
+		420,
+		15,
+		40,
+		30,
+		m.uiState.uiTextures["location"],
+		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["location"].Width), Height: float32(m.uiState.uiTextures["location"].Height)},
+		locationTooltip,
 	)
 
 	return

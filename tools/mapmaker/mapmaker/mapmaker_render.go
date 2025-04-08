@@ -114,6 +114,19 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureN
 	if m.tileGrid.Tiles[tile.Y][tile.X] == beam.WallTile {
 		rl.DrawRectangleLinesEx(pos, 2, rl.Brown)
 	}
+
+	if tile.X != 0 && tile.Y != 0 {
+		// TODO: the rest of the outlines
+		if tile.X == m.tileGrid.Start.X && tile.Y == m.tileGrid.Start.Y {
+			rl.DrawRectangleLinesEx(pos, 2, rl.Green)
+		} else if tile.X == m.tileGrid.Exit.X && tile.Y == m.tileGrid.Exit.Y {
+			rl.DrawRectangleLinesEx(pos, 2, rl.Red)
+		} else if tile.X == m.tileGrid.Respawn.X && tile.Y == m.tileGrid.Respawn.Y {
+			rl.DrawRectangleLinesEx(pos, 2, rl.Blue)
+		} else if tile.X == m.tileGrid.DungeonEntry.X && tile.Y == m.tileGrid.DungeonEntry.Y {
+			rl.DrawRectangleLinesEx(pos, 2, rl.Orange)
+		}
+	}
 }
 
 func (m *MapMaker) renderUI() {
@@ -126,7 +139,7 @@ func (m *MapMaker) renderUI() {
 	rl.DrawLine(m.window.width-180, 5, m.window.width-180, int32(m.uiState.menuBarHeight-5), rl.LightGray)
 
 	// Get all buttons
-	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
 	// Draw buttons
 	m.drawButton(tileSmallerBtn, rl.White)
@@ -135,7 +148,7 @@ func (m *MapMaker) renderUI() {
 	m.drawButton(resolutionBtn, rl.White)
 
 	// Draw new grid control buttons
-	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn)
+	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
 
 	// Draw other icon buttons
 	m.drawIconButton(saveBtn, rl.LightGray)
@@ -162,12 +175,13 @@ func (m *MapMaker) renderUI() {
 		m.window.width, m.window.height-int32(m.uiState.statusBarHeight), rl.LightGray)
 }
 
-func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn IconButton) {
+func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
 	m.drawIconButton(paintbrushBtn, rl.LightGray)
 	m.drawIconButton(paintbucketBtn, rl.LightGray)
 	m.drawIconButton(eraseBtn, rl.LightGray)
 	m.drawIconButton(selectBtn, rl.LightGray)
 	m.drawIconButton(layersBtn, rl.LightGray)
+	m.drawIconButton(locationBtn, rl.LightGray)
 
 	// Draw tools with selection highlight
 	toolButtons := map[string]IconButton{
@@ -177,6 +191,7 @@ func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, select
 		"pencileraser": eraseBtn,
 		"select":       selectBtn,
 		"layers":       layersBtn,
+		"location":     locationBtn,
 	}
 	for toolName, btn := range toolButtons {
 		if m.uiState.selectedTool == toolName {

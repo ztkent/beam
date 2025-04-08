@@ -63,7 +63,7 @@ func (m *MapMaker) renderToast() {
 
 	// Position at bottom center of screen
 	toastX := (float32(m.window.width) - toastWidth) / 2
-	toastY := float32(m.window.height) - toastHeight - padding
+	toastY := toastHeight + padding
 
 	// Calculate fade out for last 0.5 seconds
 	alpha := uint8(255)
