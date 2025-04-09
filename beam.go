@@ -31,15 +31,8 @@ const (
 	EnemyTile
 	DungeonEntrance
 	DungeonExit
-	WaterTile
 	WeaponTile
 	ChestTile
-	FenceTile
-	CampfireTile
-	BoatTile
-	DockTile
-	TreeTile
-	TreeBaseTile
 )
 
 type Map struct {
