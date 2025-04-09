@@ -335,7 +335,7 @@ func (rm *ResourceManager) GetTexture(viewName, textureName string) (TextureInfo
 			}
 
 			// If not found, check sprite sheets
-			if tex, rect, found := rm.GetSpriteFromSheets(&view, textureName); found {
+			if tex, rect, found := rm.getSpriteFromSheets(&view, textureName); found {
 				return TextureInfo{
 					Name:    textureName,
 					Texture: tex,
@@ -437,7 +437,7 @@ func (rm *ResourceManager) GetFont(viewName string) (rl.Font, error) {
 	return rl.Font{}, fmt.Errorf("font not found or not loaded in view: %s", viewName)
 }
 
-func (rm *ResourceManager) GetSpriteFromSheets(view *Scene, spriteName string) (rl.Texture2D, Rectangle, bool) {
+func (rm *ResourceManager) getSpriteFromSheets(view *Scene, spriteName string) (rl.Texture2D, Rectangle, bool) {
 	for _, sheet := range view.SpriteSheets {
 		if sheet.Loaded {
 			if region, ok := sheet.Sprites[spriteName]; ok {
@@ -446,18 +446,6 @@ func (rm *ResourceManager) GetSpriteFromSheets(view *Scene, spriteName string) (
 		}
 	}
 	return rl.Texture2D{}, Rectangle{}, false
-}
-
-func (rm *ResourceManager) GetSprite(viewName, spriteName string) (rl.Texture2D, Rectangle, error) {
-	for _, view := range rm.Scenes {
-		if view.Name == viewName {
-			if tex, rect, found := rm.GetSpriteFromSheets(&view, spriteName); found {
-				return tex, rect, nil
-			}
-			return rl.Texture2D{}, Rectangle{}, fmt.Errorf("sprite not found: %s", spriteName)
-		}
-	}
-	return rl.Texture2D{}, Rectangle{}, fmt.Errorf("view not found: %s", viewName)
 }
 
 func (rm *ResourceManager) AddResource(sceneName string, resource Resource) error {
