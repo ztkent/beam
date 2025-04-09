@@ -451,7 +451,8 @@ func (m *MapMaker) update() {
 		if m.uiState.selectedTool == "paintbrush" ||
 			m.uiState.selectedTool == "eraser" ||
 			m.uiState.selectedTool == "pencileraser" ||
-			m.uiState.selectedTool == "layers" {
+			m.uiState.selectedTool == "layers" ||
+			(m.uiState.selectedTool == "location" && m.uiState.locationMode == 1) {
 			if gridX >= 0 && gridX < m.tileGrid.Width &&
 				gridY >= 0 && gridY < m.tileGrid.Height &&
 				mousePos.Y > float32(m.uiState.menuBarHeight) {
