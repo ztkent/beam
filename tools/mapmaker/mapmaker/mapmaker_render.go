@@ -123,8 +123,12 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureN
 			rl.DrawRectangleLinesEx(pos, 2, rl.Red)
 		} else if tile.X == m.tileGrid.Respawn.X && tile.Y == m.tileGrid.Respawn.Y {
 			rl.DrawRectangleLinesEx(pos, 2, rl.Blue)
-		} else if tile.X == m.tileGrid.DungeonEntry.X && tile.Y == m.tileGrid.DungeonEntry.Y {
-			rl.DrawRectangleLinesEx(pos, 2, rl.Orange)
+		}
+
+		for _, entry := range m.tileGrid.DungeonEntry {
+			if tile.X == entry.X && tile.Y == entry.Y {
+				rl.DrawRectangleLinesEx(pos, 2, rl.Purple)
+			}
 		}
 	}
 }

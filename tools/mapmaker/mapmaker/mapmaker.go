@@ -543,12 +543,17 @@ func (m *MapMaker) update() {
 				}
 				break
 			case "location":
+				// Reset the list if were about to add new positions
+				if m.uiState.locationMode == 1 {
+					m.tileGrid.DungeonEntry = beam.Positions{}
+				}
+
 				for _, tile := range m.tileGrid.selectedTiles {
 					switch m.uiState.locationMode {
 					case 0:
 						m.tileGrid.Start = tile
 					case 1:
-						m.tileGrid.DungeonEntry = tile
+						m.tileGrid.DungeonEntry = append(m.tileGrid.DungeonEntry, tile)
 					case 2:
 						m.tileGrid.Respawn = tile
 					case 3:

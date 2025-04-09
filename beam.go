@@ -43,5 +43,5 @@ type Map struct {
 	Start            Position
 	Exit             Position
 	Respawn          Position
-	DungeonEntry     Position
+	DungeonEntry     Positions
 }
