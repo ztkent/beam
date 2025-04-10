@@ -248,7 +248,7 @@ func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
 	dialog := ResourceDialog{
 		visible:     true,
 		sheetMargin: 0,
-		gridSize:    32,
+		gridSize:    16,
 	}
 
 	dialogWidth := int32(400)

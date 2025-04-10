@@ -65,6 +65,10 @@ type UIState struct {
 
 	// Location Tool Mode
 	locationMode int
+
+	// Grid Width/Height Controls
+	gridWidth  int
+	gridHeight int
 }
 
 type TileGrid struct {
@@ -94,8 +98,11 @@ func (p MissingResources) Contains(pos beam.Position, texture string) bool {
 
 const (
 	// Gutter sizes for the window, since we define the grid size directly
-	WidthGutter  = 150
-	HeightGutter = 150
+	WidthGutter       = 150
+	HeightGutter      = 150
+	DefaultTileSize   = 20
+	DefaultGridWidth  = 64
+	DefaultGridHeight = 40
 )
 
 type ResourceDialog struct {
@@ -115,19 +122,22 @@ func NewMapMaker(width, height int32) *MapMaker {
 			title:  "2D Map Editor",
 		},
 		uiState: &UIState{
-			tileSize:           32,
-			menuBarHeight:      60,
-			statusBarHeight:    25,
-			uiTextures:         make(map[string]rl.Texture2D),
-			activeTexture:      nil,
-			selectedTool:       "",
-			toast:              nil,
-			recentTextures:     make([]string, 0),
-			resourceManageMode: false,
+			tileSize:   DefaultTileSize,   // Default size
+			gridWidth:  DefaultGridWidth,  // Default size
+			gridHeight: DefaultGridHeight, // Default size
 
-			hasSwappedEraser: false,
-			hasSwappedLayers: false,
-			locationMode:     0,
+			menuBarHeight:   60,
+			statusBarHeight: 25,
+			uiTextures:      make(map[string]rl.Texture2D),
+			activeTexture:   nil,
+			selectedTool:    "",
+			toast:           nil,
+			recentTextures:  make([]string, 0),
+
+			resourceManageMode: false,
+			hasSwappedEraser:   false,
+			hasSwappedLayers:   false,
+			locationMode:       0,
 		},
 		tileGrid: &TileGrid{
 			offset:        beam.Position{X: 0, Y: 0},
@@ -203,7 +213,7 @@ func (m *MapMaker) Run() {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
 	if m.isButtonClicked(tileSmallerBtn) {
 		if m.uiState.tileSize > 8 {
@@ -215,6 +225,35 @@ func (m *MapMaker) update() {
 	if m.isButtonClicked(tileLargerBtn) {
 		if m.uiState.tileSize < 64 {
 			m.uiState.tileSize++
+			m.calculateGridSize()
+			m.resizeGrid()
+		}
+	}
+
+	if m.isButtonClicked(widthSmallerBtn) {
+		if m.uiState.gridWidth > 10 {
+			m.uiState.gridWidth--
+			m.calculateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(widthLargerBtn) {
+		if m.uiState.gridWidth < 100 {
+			m.uiState.gridWidth++
+			m.calculateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(heightSmallerBtn) {
+		if m.uiState.gridHeight > 10 {
+			m.uiState.gridHeight--
+			m.calculateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(heightLargerBtn) {
+		if m.uiState.gridHeight < 100 {
+			m.uiState.gridHeight++
 			m.calculateGridSize()
 			m.resizeGrid()
 		}
@@ -269,7 +308,10 @@ func (m *MapMaker) update() {
 	if m.isIconButtonClicked(closeMapBtn) {
 		if openCloseConfirmationDialog() {
 			// Reset to default state
-			m.uiState.tileSize = 32
+			m.uiState.tileSize = DefaultTileSize
+			m.uiState.gridWidth = DefaultGridWidth
+			m.uiState.gridHeight = DefaultGridHeight
+
 			m.showResourceViewer = false
 			m.uiState.resourceViewerScroll = 0
 			m.currentFile = ""
@@ -588,9 +630,9 @@ func (m *MapMaker) initTileGrid() {
 }
 
 func (m *MapMaker) calculateGridSize() {
-	// Calculate max possible grid dimensions for fixed window size
-	m.tileGrid.Width = int(1280 / m.uiState.tileSize)
-	m.tileGrid.Height = int(800 / m.uiState.tileSize)
+	// Use manual grid dimensions instead of calculating from window size
+	m.tileGrid.Width = m.uiState.gridWidth
+	m.tileGrid.Height = m.uiState.gridHeight
 }
 
 func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, sheetMargin int32, gridSize int32) error {
@@ -620,10 +662,16 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
-	// Tile size controls (top row)
-	tileSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
-	tileLargerBtn = m.NewButton(85, 8, 30, 20, "+")
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
+	// Grid size controls (first row)
+	widthSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
+	widthLargerBtn = m.NewButton(85, 8, 30, 20, "+")
+	heightSmallerBtn = m.NewButton(10, 33, 30, 20, "-")
+	heightLargerBtn = m.NewButton(85, 33, 30, 20, "+")
+
+	// Tile size controls (second row)
+	tileSmallerBtn = m.NewButton(10, 58, 30, 20, "-")
+	tileLargerBtn = m.NewButton(85, 58, 30, 20, "+")
 
 	// Icon buttons
 	loadBtn = m.NewIconButton(

@@ -109,9 +109,11 @@ func (m *MapMaker) LoadMap(filename string) error {
 	}
 	m.resources = resources.InitFromState(saveData.ResourceState)
 
-	// Update UI state
+	// Update UI state with loaded map dimensions
 	m.uiState.tileSize = saveData.TileSize
 	m.uiState.recentTextures = saveData.RecentTextures
+	m.uiState.gridWidth = saveData.TileGrid.Width
+	m.uiState.gridHeight = saveData.TileGrid.Height
 
 	// Set most recent texture as active
 	if len(m.uiState.recentTextures) > 0 {

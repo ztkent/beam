@@ -143,12 +143,20 @@ func (m *MapMaker) renderUI() {
 	rl.DrawLine(m.window.width-180, 5, m.window.width-180, int32(m.uiState.menuBarHeight-5), rl.LightGray)
 
 	// Get all buttons
-	tileSmallerBtn, tileLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
-	// Draw buttons
+	// Draw size control buttons
+	m.drawButton(widthSmallerBtn, rl.White)
+	m.drawButton(widthLargerBtn, rl.White)
+	rl.DrawText(fmt.Sprintf("W:%d", m.uiState.gridWidth), 48, 12, 12, rl.DarkGray)
+
+	m.drawButton(heightSmallerBtn, rl.White)
+	m.drawButton(heightLargerBtn, rl.White)
+	rl.DrawText(fmt.Sprintf("H:%d", m.uiState.gridHeight), 48, 37, 12, rl.DarkGray)
+
 	m.drawButton(tileSmallerBtn, rl.White)
 	m.drawButton(tileLargerBtn, rl.White)
-	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 12, 12, rl.DarkGray)
+	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 62, 12, rl.DarkGray)
 
 	// Draw new grid control buttons
 	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
