@@ -143,13 +143,12 @@ func (m *MapMaker) renderUI() {
 	rl.DrawLine(m.window.width-180, 5, m.window.width-180, int32(m.uiState.menuBarHeight-5), rl.LightGray)
 
 	// Get all buttons
-	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, resetBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
 	// Draw buttons
 	m.drawButton(tileSmallerBtn, rl.White)
 	m.drawButton(tileLargerBtn, rl.White)
 	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 12, 12, rl.DarkGray)
-	m.drawButton(resolutionBtn, rl.White)
 
 	// Draw new grid control buttons
 	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)

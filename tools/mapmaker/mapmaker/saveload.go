@@ -28,12 +28,11 @@ func (t *TileGrid) SaveMapToFile(filename string) error {
 
 // SaveData represents the structure of our mapmaker save files
 type SaveData struct {
-	TileGrid          *TileGrid               `json:"tileGrid"`
-	TileSize          int                     `json:"tileSize"`
-	CurrentResolution Resolution              `json:"currentResolution"`
-	CurrentResIndex   int                     `json:"currentResIndex"`
-	ResourceState     resources.ResourceState `json:"resourceState"`
-	RecentTextures    []string                `json:"recentTextures"`
+	TileGrid        *TileGrid               `json:"tileGrid"`
+	TileSize        int                     `json:"tileSize"`
+	CurrentResIndex int                     `json:"currentResIndex"`
+	ResourceState   resources.ResourceState `json:"resourceState"`
+	RecentTextures  []string                `json:"recentTextures"`
 }
 
 type ConfigData struct {
@@ -70,12 +69,10 @@ func LoadConfig() (string, error) {
 
 func (m *MapMaker) SaveMap(filename string) error {
 	saveData := SaveData{
-		TileSize:          m.uiState.tileSize,
-		CurrentResolution: m.uiState.resolutions[m.uiState.currentResIndex],
-		CurrentResIndex:   m.uiState.currentResIndex,
-		ResourceState:     m.resources.SaveState(),
-		TileGrid:          m.tileGrid,
-		RecentTextures:    m.uiState.recentTextures,
+		TileSize:       m.uiState.tileSize,
+		ResourceState:  m.resources.SaveState(),
+		TileGrid:       m.tileGrid,
+		RecentTextures: m.uiState.recentTextures,
 	}
 
 	jsonData, err := json.MarshalIndent(saveData, "", "    ")
@@ -114,7 +111,6 @@ func (m *MapMaker) LoadMap(filename string) error {
 
 	// Update UI state
 	m.uiState.tileSize = saveData.TileSize
-	m.uiState.currentResIndex = saveData.CurrentResIndex
 	m.uiState.recentTextures = saveData.RecentTextures
 
 	// Set most recent texture as active
@@ -123,12 +119,6 @@ func (m *MapMaker) LoadMap(filename string) error {
 			m.uiState.activeTexture = &tex
 		}
 	}
-
-	// Update window size
-	newRes := m.uiState.resolutions[m.uiState.currentResIndex]
-	m.window.width = int32(newRes.width + WidthGutter)
-	m.window.height = int32(newRes.height + HeightGutter)
-	rl.SetWindowSize(int(m.window.width), int(m.window.height))
 
 	m.calculateGridSize()
 	m.currentFile = filename

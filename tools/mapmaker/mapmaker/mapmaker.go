@@ -29,18 +29,10 @@ type Window struct {
 	title  string
 }
 
-type Resolution struct {
-	width  int
-	height int
-	label  string
-}
-
 type UIState struct {
 	tileSize        int
 	menuBarHeight   int
 	statusBarHeight int
-	resolutions     []Resolution
-	currentResIndex int
 	uiTextures      map[string]rl.Texture2D
 	activeTexture   *resources.TextureInfo
 	selectedTool    string
@@ -116,23 +108,16 @@ type ResourceDialog struct {
 }
 
 func NewMapMaker(width, height int32) *MapMaker {
-	resolutions := []Resolution{
-		{1280, 720, "1280x720"},
-		{1280, 800, "1280x800"},
-		{1920, 1080, "1920x1080"},
-	}
 	mm := &MapMaker{
 		window: &Window{
-			width:  int32(resolutions[0].width + WidthGutter),
-			height: int32(resolutions[0].height + HeightGutter),
+			width:  1280 + WidthGutter,
+			height: 800 + HeightGutter,
 			title:  "2D Map Editor",
 		},
 		uiState: &UIState{
 			tileSize:           32,
 			menuBarHeight:      60,
 			statusBarHeight:    25,
-			resolutions:        resolutions,
-			currentResIndex:    0,
 			uiTextures:         make(map[string]rl.Texture2D),
 			activeTexture:      nil,
 			selectedTool:       "",
@@ -218,7 +203,7 @@ func (m *MapMaker) Run() {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, resolutionBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
 	if m.isButtonClicked(tileSmallerBtn) {
 		if m.uiState.tileSize > 8 {
@@ -233,16 +218,6 @@ func (m *MapMaker) update() {
 			m.calculateGridSize()
 			m.resizeGrid()
 		}
-	}
-
-	if m.isButtonClicked(resolutionBtn) {
-		m.uiState.currentResIndex = (m.uiState.currentResIndex + 1) % len(m.uiState.resolutions)
-		newRes := m.uiState.resolutions[m.uiState.currentResIndex]
-		m.window.width = int32(newRes.width + WidthGutter)
-		m.window.height = int32(newRes.height + HeightGutter)
-		rl.SetWindowSize(int(m.window.width), int(m.window.height))
-		m.calculateGridSize()
-		m.resizeGrid()
 	}
 
 	if m.isIconButtonClicked(saveBtn) {
@@ -294,18 +269,11 @@ func (m *MapMaker) update() {
 	if m.isIconButtonClicked(closeMapBtn) {
 		if openCloseConfirmationDialog() {
 			// Reset to default state
-			m.uiState.currentResIndex = 0
 			m.uiState.tileSize = 32
 			m.showResourceViewer = false
 			m.uiState.resourceViewerScroll = 0
 			m.currentFile = ""
 			rl.SetWindowTitle(m.window.title)
-
-			// Reset window size
-			newRes := m.uiState.resolutions[m.uiState.currentResIndex]
-			m.window.width = int32(newRes.width + WidthGutter)
-			m.window.height = int32(newRes.height + HeightGutter)
-			rl.SetWindowSize(int(m.window.width), int(m.window.height))
 
 			// Reset grid
 			m.calculateGridSize()
@@ -620,10 +588,9 @@ func (m *MapMaker) initTileGrid() {
 }
 
 func (m *MapMaker) calculateGridSize() {
-	// Calculate max possible grid dimensions
-	currRes := m.uiState.resolutions[m.uiState.currentResIndex]
-	m.tileGrid.Width = int(currRes.width / m.uiState.tileSize)
-	m.tileGrid.Height = int(currRes.height / m.uiState.tileSize)
+	// Calculate max possible grid dimensions for fixed window size
+	m.tileGrid.Width = int(1280 / m.uiState.tileSize)
+	m.tileGrid.Height = int(800 / m.uiState.tileSize)
 }
 
 func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, sheetMargin int32, gridSize int32) error {
@@ -653,11 +620,10 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, resolutionBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
 	// Tile size controls (top row)
 	tileSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	tileLargerBtn = m.NewButton(85, 8, 30, 20, "+")
-	resolutionBtn = m.NewButton(10, 33, 105, 20, m.uiState.resolutions[m.uiState.currentResIndex].label)
 
 	// Icon buttons
 	loadBtn = m.NewIconButton(
