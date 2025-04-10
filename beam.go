@@ -45,3 +45,8 @@ type Map struct {
 	Respawn          Position
 	DungeonEntry     Positions
 }
+
+type Viewport struct {
+	X, Y                    int
+	WidthTiles, HeightTiles int
+}
