@@ -2,6 +2,8 @@
 
 
 - Let me create huge maps, but scroll around the viewport at a given size
+- Changing the resolution shouldnt perm remove tiles and textures.
+  - Idea of a viewport
 
 - Add color picker - alternative to texture
 
