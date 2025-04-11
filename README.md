@@ -10,6 +10,7 @@
   - [x] Multiple resolution support with dynamic grid sizing
   - [x] Real-time tile editing with multi-layer support
   - [x] Advanced texture management, with a variety of editing tools
+  - [x] Scrollable viewport to design large maps
   - For more details, [view the Map Maker tool](https://github.com/ztkent/beam/tree/main/tools/mapmaker)
 - Resource management
   - [x] Support for individual textures and sprite sheets
