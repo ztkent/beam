@@ -11,27 +11,47 @@ func (m *MapMaker) renderGrid() {
 	startX := m.tileGrid.offset.X
 	startY := m.tileGrid.offset.Y
 
-	// Draw grid lines
-	for i := 0; i <= m.tileGrid.Width; i++ {
+	// Calculate max visible tiles based on default size to maintain consistent viewport size
+	maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
+	maxVisibleHeight := MaxDisplayHeight * DefaultTileSize / m.uiState.tileSize
+
+	// Calculate visible range based on viewport and adjusted max dimensions
+	viewStartX := m.tileGrid.viewportOffset.X
+	viewStartY := m.tileGrid.viewportOffset.Y
+	viewEndX := min(viewStartX+maxVisibleWidth, m.tileGrid.Width)
+	viewEndY := min(viewStartY+maxVisibleHeight, m.tileGrid.Height)
+
+	// Draw grid lines for visible area
+	visibleWidth := viewEndX - viewStartX
+	visibleHeight := viewEndY - viewStartY
+
+	// Draw horizontal grid lines
+	for i := 0; i <= visibleWidth; i++ {
 		x := startX + i*m.uiState.tileSize
-		rl.DrawLine(int32(x), int32(startY), int32(x), int32(startY+m.tileGrid.Height*m.uiState.tileSize), rl.LightGray)
-	}
-	for i := 0; i <= m.tileGrid.Height; i++ {
-		y := startY + i*m.uiState.tileSize
-		rl.DrawLine(int32(startX), int32(y), int32(startX+m.tileGrid.Width*m.uiState.tileSize), int32(y), rl.LightGray)
+		rl.DrawLine(int32(x), int32(startY), int32(x), int32(startY+visibleHeight*m.uiState.tileSize), rl.LightGray)
 	}
 
-	// Draw grid tiles
-	for y := 0; y < m.tileGrid.Height; y++ {
-		for x := 0; x < m.tileGrid.Width; x++ {
+	// Draw vertical grid lines
+	for i := 0; i <= visibleHeight; i++ {
+		y := startY + i*m.uiState.tileSize
+		rl.DrawLine(int32(startX), int32(y), int32(startX+visibleWidth*m.uiState.tileSize), int32(y), rl.LightGray)
+	}
+
+	// Draw grid tiles within viewport
+	for y := viewStartY; y < viewEndY; y++ {
+		for x := viewStartX; x < viewEndX; x++ {
+			// Calculate screen position for this tile
+			screenX := startX + (x-viewStartX)*m.uiState.tileSize
+			screenY := startY + (y-viewStartY)*m.uiState.tileSize
+
 			pos := rl.Rectangle{
-				X:      float32(startX + x*m.uiState.tileSize),
-				Y:      float32(startY + y*m.uiState.tileSize),
+				X:      float32(screenX),
+				Y:      float32(screenY),
 				Width:  float32(m.uiState.tileSize),
 				Height: float32(m.uiState.tileSize),
 			}
 
-			// Draw all textures at this location, in order
+			// Draw all textures at this location
 			for i, textureName := range m.tileGrid.Textures[y][x] {
 				rotateFloor := float64(m.tileGrid.TextureRotations[y][x][i])
 				tile := beam.Position{X: x, Y: y}
@@ -40,37 +60,136 @@ func (m *MapMaker) renderGrid() {
 		}
 	}
 
-	// Draw grid lines over tiles
-	for i := 0; i <= m.tileGrid.Width; i++ {
-		x := startX + i*m.uiState.tileSize
-		rl.DrawLine(int32(x), int32(startY), int32(x), int32(startY+m.tileGrid.Height*m.uiState.tileSize), rl.LightGray)
-	}
-	for i := 0; i <= m.tileGrid.Height; i++ {
-		y := startY + i*m.uiState.tileSize
-		rl.DrawLine(int32(startX), int32(y), int32(startX+m.tileGrid.Width*m.uiState.tileSize), int32(y), rl.LightGray)
+	// Draw viewport controls if any part of the grid is not visible
+	if m.tileGrid.Width > maxVisibleWidth || m.tileGrid.Height > maxVisibleHeight {
+		m.renderViewportControls()
 	}
 
 	// Draw selection highlight if there's a selection
 	if m.tileGrid.hasSelection {
 		for _, tile := range m.tileGrid.selectedTiles {
-			highlightX := startX + tile.X*m.uiState.tileSize
-			highlightY := startY + tile.Y*m.uiState.tileSize
-			// Draw highlight rectangle with thicker lines
-			rl.DrawRectangleLinesEx(rl.Rectangle{
-				X:      float32(highlightX),
-				Y:      float32(highlightY),
-				Width:  float32(m.uiState.tileSize),
-				Height: float32(m.uiState.tileSize),
-			}, 2, rl.Black)
+			// Only draw highlight if tile is in viewport
+			if tile.X >= viewStartX && tile.X < viewEndX && tile.Y >= viewStartY && tile.Y < viewEndY {
+				highlightX := startX + (tile.X-viewStartX)*m.uiState.tileSize
+				highlightY := startY + (tile.Y-viewStartY)*m.uiState.tileSize
+				rl.DrawRectangleLinesEx(rl.Rectangle{
+					X:      float32(highlightX),
+					Y:      float32(highlightY),
+					Width:  float32(m.uiState.tileSize),
+					Height: float32(m.uiState.tileSize),
+				}, 2, rl.Black)
+			}
 		}
 	}
 
 	// Draw grid dimensions in bottom right
 	dimensions := fmt.Sprintf("%dx%d", m.tileGrid.Width, m.tileGrid.Height)
 	textWidth := int(rl.MeasureText(dimensions, 20))
-	textX := startX + m.tileGrid.Width*m.uiState.tileSize - textWidth
-	textY := startY + m.tileGrid.Height*m.uiState.tileSize + 5
+	textX := startX + visibleWidth*m.uiState.tileSize - textWidth
+	textY := startY + visibleHeight*m.uiState.tileSize + 5
 	rl.DrawText(dimensions, int32(textX), int32(textY), 20, rl.DarkGray)
+}
+
+func (m *MapMaker) renderViewportControls() {
+	btnSize := int32(24)
+	gutterPadding := int32(15)
+	btnSpacing := int32(2)
+	verticalOffset := int(35)
+
+	baseX := int32(gutterPadding)
+	baseY := int32(m.tileGrid.offset.Y + (m.tileGrid.viewportHeight*m.uiState.tileSize)/2 + verticalOffset)
+
+	maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
+	maxVisibleHeight := MaxDisplayHeight * DefaultTileSize / m.uiState.tileSize
+
+	remainingUp := m.tileGrid.viewportOffset.Y
+	remainingDown := m.tileGrid.Height - (m.tileGrid.viewportOffset.Y + maxVisibleHeight)
+	remainingLeft := m.tileGrid.viewportOffset.X
+	remainingRight := m.tileGrid.Width - (m.tileGrid.viewportOffset.X + maxVisibleWidth)
+
+	// Up button
+	upBtn := rl.Rectangle{
+		X:      float32(baseX + btnSize/2),
+		Y:      float32(baseY - btnSize - btnSpacing),
+		Width:  float32(btnSize),
+		Height: float32(btnSize),
+	}
+	if remainingUp > 0 {
+		rl.DrawTexturePro(
+			m.uiState.uiTextures["up"],
+			rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["up"].Width), Height: float32(m.uiState.uiTextures["up"].Height)},
+			upBtn,
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), upBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.tileGrid.viewportOffset.Y--
+		}
+	}
+
+	// Down button
+	downBtn := rl.Rectangle{
+		X:      float32(baseX + btnSize/2),
+		Y:      float32(baseY + btnSpacing),
+		Width:  float32(btnSize),
+		Height: float32(btnSize),
+	}
+	if remainingDown > 0 {
+		rl.DrawTexturePro(
+			m.uiState.uiTextures["down"],
+			rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["down"].Width), Height: float32(m.uiState.uiTextures["down"].Height)},
+			downBtn,
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), downBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.tileGrid.viewportOffset.Y++
+		}
+	}
+
+	// Left button
+	leftBtn := rl.Rectangle{
+		X:      float32(baseX),
+		Y:      float32(baseY - btnSize/2),
+		Width:  float32(btnSize),
+		Height: float32(btnSize),
+	}
+	if remainingLeft > 0 {
+		rl.DrawTexturePro(
+			m.uiState.uiTextures["left"],
+			rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["left"].Width), Height: float32(m.uiState.uiTextures["left"].Height)},
+			leftBtn,
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), leftBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.tileGrid.viewportOffset.X--
+		}
+	}
+
+	// Right button
+	rightBtn := rl.Rectangle{
+		X:      float32(baseX + btnSize),
+		Y:      float32(baseY - btnSize/2),
+		Width:  float32(btnSize),
+		Height: float32(btnSize),
+	}
+	if remainingRight > 0 {
+		rl.DrawTexturePro(
+			m.uiState.uiTextures["right"],
+			rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["right"].Width), Height: float32(m.uiState.uiTextures["right"].Height)},
+			rightBtn,
+			rl.Vector2{X: 0, Y: 0},
+			0,
+			rl.White,
+		)
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), rightBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.tileGrid.viewportOffset.X++
+		}
+	}
 }
 
 func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureName string, rotate float64) {

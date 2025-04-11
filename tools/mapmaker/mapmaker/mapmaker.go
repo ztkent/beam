@@ -79,6 +79,10 @@ type TileGrid struct {
 
 	// This is the actual map we will use in game with beam.
 	beam.Map
+
+	viewportOffset beam.Position // Tracks how many tiles to offset the view
+	viewportWidth  int           // Width of visible viewport in tiles
+	viewportHeight int           // Height of visible viewport in tiles
 }
 
 type MissingResources []MissingResource
@@ -103,6 +107,8 @@ const (
 	DefaultTileSize   = 20
 	DefaultGridWidth  = 64
 	DefaultGridHeight = 40
+	MaxDisplayWidth   = 64
+	MaxDisplayHeight  = 40
 )
 
 type ResourceDialog struct {
@@ -140,9 +146,12 @@ func NewMapMaker(width, height int32) *MapMaker {
 			locationMode:       0,
 		},
 		tileGrid: &TileGrid{
-			offset:        beam.Position{X: 0, Y: 0},
-			selectedTiles: beam.Positions{{X: -1, Y: -1}},
-			hasSelection:  false,
+			offset:         beam.Position{X: 0, Y: 0},
+			selectedTiles:  beam.Positions{{X: -1, Y: -1}},
+			hasSelection:   false,
+			viewportOffset: beam.Position{X: 0, Y: 0},
+			viewportWidth:  MaxDisplayWidth,
+			viewportHeight: MaxDisplayHeight,
 		},
 		currentFile: "",
 	}
@@ -171,6 +180,12 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["layerground"] = rl.LoadTexture("../assets/soil.png")
 	m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
 	m.uiState.uiTextures["location"] = rl.LoadTexture("../assets/location.png")
+
+	// Add directional arrows for viewport
+	m.uiState.uiTextures["up"] = rl.LoadTexture("../assets/up.png")
+	m.uiState.uiTextures["down"] = rl.LoadTexture("../assets/down.png")
+	m.uiState.uiTextures["left"] = rl.LoadTexture("../assets/left.png")
+	m.uiState.uiTextures["right"] = rl.LoadTexture("../assets/right.png")
 
 	m.resources = resources.NewResourceManager()
 	m.initTileGrid()
@@ -421,8 +436,12 @@ func (m *MapMaker) update() {
 	}
 
 	// Center the grid in the window
-	totalGridWidth := m.tileGrid.Width * m.uiState.tileSize
-	totalGridHeight := m.tileGrid.Height * m.uiState.tileSize
+	maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
+	maxVisibleHeight := MaxDisplayHeight * DefaultTileSize / m.uiState.tileSize
+	displayWidth := min(m.tileGrid.Width, maxVisibleWidth)
+	displayHeight := min(m.tileGrid.Height, maxVisibleHeight)
+	totalGridWidth := displayWidth * m.uiState.tileSize
+	totalGridHeight := displayHeight * m.uiState.tileSize
 
 	// Calculate available workspace excluding UI elements
 	workspaceWidth := int(m.window.width)
