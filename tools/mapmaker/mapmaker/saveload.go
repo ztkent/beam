@@ -122,7 +122,7 @@ func (m *MapMaker) LoadMap(filename string) error {
 		}
 	}
 
-	m.calculateGridSize()
+	m.updateGridSize()
 	m.currentFile = filename
 
 	// Update grid data directly

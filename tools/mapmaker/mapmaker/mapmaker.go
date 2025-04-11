@@ -155,7 +155,7 @@ func NewMapMaker(width, height int32) *MapMaker {
 		},
 		currentFile: "",
 	}
-	mm.calculateGridSize()
+	mm.updateGridSize()
 	return mm
 }
 
@@ -217,12 +217,12 @@ func (m *MapMaker) Run() {
 			}
 		}
 
-		m.update()
+		m.update() // Update settings, configs, and UI state.
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RayWhite)
-		m.renderGrid()
-		m.renderUI()
-		m.renderToast()
+		m.renderGrid()  // Render the current map
+		m.renderUI()    // Render the UI
+		m.renderToast() // Render any active toasts
 		rl.EndDrawing()
 	}
 }
@@ -230,210 +230,12 @@ func (m *MapMaker) Run() {
 func (m *MapMaker) update() {
 	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
-	if m.isButtonClicked(tileSmallerBtn) {
-		if m.uiState.tileSize > 8 {
-			m.uiState.tileSize--
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-	if m.isButtonClicked(tileLargerBtn) {
-		if m.uiState.tileSize < 64 {
-			m.uiState.tileSize++
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-
-	if m.isButtonClicked(widthSmallerBtn) {
-		if m.uiState.gridWidth > 10 {
-			m.uiState.gridWidth--
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-	if m.isButtonClicked(widthLargerBtn) {
-		if m.uiState.gridWidth < 100 {
-			m.uiState.gridWidth++
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-	if m.isButtonClicked(heightSmallerBtn) {
-		if m.uiState.gridHeight > 10 {
-			m.uiState.gridHeight--
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-	if m.isButtonClicked(heightLargerBtn) {
-		if m.uiState.gridHeight < 100 {
-			m.uiState.gridHeight++
-			m.calculateGridSize()
-			m.resizeGrid()
-		}
-	}
-
-	if m.isIconButtonClicked(saveBtn) {
-		if m.currentFile != "" {
-			if err := m.SaveMap(m.currentFile); err != nil {
-				m.showToast("Error saving map: "+err.Error(), ToastError)
-			} else {
-				m.showToast("Map saved successfully!", ToastSuccess)
-			}
-		} else {
-			filename := openSaveDialog()
-			if filename != "" {
-				if !strings.HasSuffix(filename, ".json") {
-					filename += ".json"
-				}
-				if err := m.SaveMap(filename); err != nil {
-					m.showToast("Error saving map: "+err.Error(), ToastError)
-				} else {
-					m.showToast("Map saved successfully!", ToastSuccess)
-				}
-			}
-		}
-	}
-	if m.isIconButtonClicked(loadBtn) {
-		filename := openLoadDialog()
-		if filename != "" {
-			if err := m.LoadMap(filename); err != nil {
-				m.showToast("Error loading map: "+err.Error(), ToastError)
-			} else {
-				m.showToast("Map loaded successfully!", ToastSuccess)
-			}
-		}
-	}
-
-	if m.isIconButtonClicked(viewResourcesBtn) {
-		m.showResourceViewer = true
-	}
-	if m.isIconButtonClicked(loadResourceBtn) {
-		name, filepath, isSheet, sheetMargin, gridSize, err := openLoadResourceDialog()
-		if err != "" {
-			fmt.Println("Error loading resource:", err)
-			m.showToast(err, ToastError)
-		} else if err := m.loadResource(name, filepath, isSheet, sheetMargin, gridSize); err != nil {
-			fmt.Println("Error loading texture:", err)
-			m.showToast(err.Error(), ToastError)
-		}
-	}
-
-	if m.isIconButtonClicked(closeMapBtn) {
-		if openCloseConfirmationDialog() {
-			// Reset to default state
-			m.uiState.tileSize = DefaultTileSize
-			m.uiState.gridWidth = DefaultGridWidth
-			m.uiState.gridHeight = DefaultGridHeight
-
-			m.showResourceViewer = false
-			m.uiState.resourceViewerScroll = 0
-			m.currentFile = ""
-			rl.SetWindowTitle(m.window.title)
-
-			// Reset grid
-			m.calculateGridSize()
-			m.initTileGrid()
-		}
-	}
+	m.handleResizeGrid(tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn)
+	m.handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn)
+	m.handleResourceViewer(viewResourcesBtn, loadResourceBtn)
 
 	// Tool button handlers
-	if m.isIconButtonClicked(paintbrushBtn) {
-		if m.uiState.selectedTool == "paintbrush" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "paintbrush"
-			m.showToast("Paintbrush tool selected", ToastInfo)
-		}
-	}
-	if m.isIconButtonClicked(paintbucketBtn) {
-		if m.uiState.selectedTool == "paintbucket" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "paintbucket"
-			m.showToast("Paint bucket tool selected", ToastInfo)
-		}
-	}
-	if m.isIconButtonClicked(eraseBtn) {
-		if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
-			m.uiState.selectedTool = ""
-		} else {
-			name := "eraser"
-			// Use pencileraser if swapped
-			if m.uiState.hasSwappedEraser {
-				name = "pencileraser"
-			}
-			m.uiState.selectedTool = name
-			m.showToast(name+" tool selected", ToastInfo)
-		}
-	}
-	if m.isIconButtonClicked(selectBtn) {
-		if m.uiState.selectedTool == "select" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "select"
-			m.tileGrid.hasSelection = false
-			m.tileGrid.selectedTiles = beam.Positions{}
-			m.showToast("Select tool selected", ToastInfo)
-		}
-	}
-	if m.isIconButtonClicked(layersBtn) {
-		if m.uiState.selectedTool == "layers" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "layers"
-			m.showToast("Layers tool selected", ToastInfo)
-		}
-	}
-	if m.isIconButtonClicked(locationBtn) {
-		if m.uiState.selectedTool == "location" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "location"
-			m.showToast("Location tool selected", ToastInfo)
-		}
-	}
-
-	// Handle tool swaps
-	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
-		if m.uiState.rightClickStartTime == 0 {
-			m.uiState.rightClickStartTime = rl.GetTime()
-		} else if rl.GetTime()-m.uiState.rightClickStartTime > 0.5 {
-			// Handle eraser swap
-			if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
-				m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
-					m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
-				if m.uiState.selectedTool == "eraser" {
-					m.uiState.selectedTool = "pencileraser"
-				} else {
-					m.uiState.selectedTool = "eraser"
-				}
-				m.uiState.hasSwappedEraser = !m.uiState.hasSwappedEraser
-			}
-
-			// Handle layers swap
-			if m.uiState.selectedTool == "layers" {
-				m.uiState.hasSwappedLayers = !m.uiState.hasSwappedLayers
-				if m.uiState.hasSwappedLayers {
-					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerwall"]
-				} else {
-					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
-				}
-			}
-
-			// Handle location swap
-			if m.uiState.selectedTool == "location" {
-				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4 // Cycle through 4 states
-				modeNames := []string{"Player Start", "Dungeon Entrance", "Respawn", "Exit"}
-				m.showToast(fmt.Sprintf("Location Mode: %s", modeNames[m.uiState.locationMode]), ToastInfo)
-			}
-
-			m.uiState.rightClickStartTime = 0
-		}
-	} else {
-		m.uiState.rightClickStartTime = 0
-	}
+	m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
 
 	// Center the grid in the window
 	maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
@@ -453,10 +255,10 @@ func (m *MapMaker) update() {
 		Y: (workspaceHeight-totalGridHeight)/2 + m.uiState.menuBarHeight,
 	}
 
-	// Handle tile selection
+	// Handle tile selection - Handle the viewport offset
 	mousePos := rl.GetMousePosition()
-	gridX := int((mousePos.X - float32(m.tileGrid.offset.X)) / float32(m.uiState.tileSize))
-	gridY := int((mousePos.Y - float32(m.tileGrid.offset.Y)) / float32(m.uiState.tileSize))
+	gridX := int((mousePos.X-float32(m.tileGrid.offset.X))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.X
+	gridY := int((mousePos.Y-float32(m.tileGrid.offset.Y))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.Y
 
 	if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Check if any dialogs are open
@@ -596,8 +398,223 @@ func (m *MapMaker) update() {
 	}
 }
 
+// handleMapTools handles the selecting and swapping of tools
+func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconButton, eraseBtn IconButton, selectBtn IconButton, layersBtn IconButton, locationBtn IconButton) {
+	if m.isIconButtonClicked(paintbrushBtn) {
+		if m.uiState.selectedTool == "paintbrush" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "paintbrush"
+			m.showToast("Paintbrush tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(paintbucketBtn) {
+		if m.uiState.selectedTool == "paintbucket" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "paintbucket"
+			m.showToast("Paint bucket tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(eraseBtn) {
+		if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
+			m.uiState.selectedTool = ""
+		} else {
+			name := "eraser"
+			// Use pencileraser if swapped
+			if m.uiState.hasSwappedEraser {
+				name = "pencileraser"
+			}
+			m.uiState.selectedTool = name
+			m.showToast(name+" tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(selectBtn) {
+		if m.uiState.selectedTool == "select" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "select"
+			m.tileGrid.hasSelection = false
+			m.tileGrid.selectedTiles = beam.Positions{}
+			m.showToast("Select tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(layersBtn) {
+		if m.uiState.selectedTool == "layers" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "layers"
+			m.showToast("Layers tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(locationBtn) {
+		if m.uiState.selectedTool == "location" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "location"
+			m.showToast("Location tool selected", ToastInfo)
+		}
+	}
+
+	// Handle tool swaps
+	if rl.IsMouseButtonDown(rl.MouseButtonRight) {
+		if m.uiState.rightClickStartTime == 0 {
+			m.uiState.rightClickStartTime = rl.GetTime()
+		} else if rl.GetTime()-m.uiState.rightClickStartTime > 0.5 {
+			// Handle eraser swap
+			if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
+				m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
+					m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
+				if m.uiState.selectedTool == "eraser" {
+					m.uiState.selectedTool = "pencileraser"
+				} else {
+					m.uiState.selectedTool = "eraser"
+				}
+				m.uiState.hasSwappedEraser = !m.uiState.hasSwappedEraser
+			}
+
+			// Handle layers swap
+			if m.uiState.selectedTool == "layers" {
+				m.uiState.hasSwappedLayers = !m.uiState.hasSwappedLayers
+				if m.uiState.hasSwappedLayers {
+					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerwall"]
+				} else {
+					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
+				}
+			}
+
+			// Handle location swap
+			if m.uiState.selectedTool == "location" {
+				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4 // Cycle through 4 states
+				modeNames := []string{"Player Start", "Dungeon Entrance", "Respawn", "Exit"}
+				m.showToast(fmt.Sprintf("Location Mode: %s", modeNames[m.uiState.locationMode]), ToastInfo)
+			}
+
+			m.uiState.rightClickStartTime = 0
+		}
+	} else {
+		m.uiState.rightClickStartTime = 0
+	}
+}
+
+// handleResourceViewer handles the resource viewer tool settings
+func (m *MapMaker) handleResourceViewer(viewResourcesBtn IconButton, loadResourceBtn IconButton) {
+	if m.isIconButtonClicked(viewResourcesBtn) {
+		m.showResourceViewer = true
+	}
+	if m.isIconButtonClicked(loadResourceBtn) {
+		name, filepath, isSheet, sheetMargin, gridSize, err := openLoadResourceDialog()
+		if err != "" {
+			fmt.Println("Error loading resource:", err)
+			m.showToast(err, ToastError)
+		} else if err := m.loadResource(name, filepath, isSheet, sheetMargin, gridSize); err != nil {
+			fmt.Println("Error loading texture:", err)
+			m.showToast(err.Error(), ToastError)
+		}
+	}
+}
+
+// handleSaveLoad handles the save, load, and close tools
+func (m *MapMaker) handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn IconButton) {
+	if m.isIconButtonClicked(saveBtn) {
+		if m.currentFile != "" {
+			if err := m.SaveMap(m.currentFile); err != nil {
+				m.showToast("Error saving map: "+err.Error(), ToastError)
+			} else {
+				m.showToast("Map saved successfully!", ToastSuccess)
+			}
+		} else {
+			filename := openSaveDialog()
+			if filename != "" {
+				if !strings.HasSuffix(filename, ".json") {
+					filename += ".json"
+				}
+				if err := m.SaveMap(filename); err != nil {
+					m.showToast("Error saving map: "+err.Error(), ToastError)
+				} else {
+					m.showToast("Map saved successfully!", ToastSuccess)
+				}
+			}
+		}
+	}
+	if m.isIconButtonClicked(loadBtn) {
+		filename := openLoadDialog()
+		if filename != "" {
+			if err := m.LoadMap(filename); err != nil {
+				m.showToast("Error loading map: "+err.Error(), ToastError)
+			} else {
+				m.showToast("Map loaded successfully!", ToastSuccess)
+			}
+		}
+	}
+	if m.isIconButtonClicked(closeMapBtn) {
+		if openCloseConfirmationDialog() {
+			// Reset to default state
+			m.uiState.tileSize = DefaultTileSize
+			m.uiState.gridWidth = DefaultGridWidth
+			m.uiState.gridHeight = DefaultGridHeight
+
+			m.showResourceViewer = false
+			m.uiState.resourceViewerScroll = 0
+			m.currentFile = ""
+			rl.SetWindowTitle(m.window.title)
+
+			// Reset grid
+			m.updateGridSize()
+			m.initTileGrid()
+		}
+	}
+}
+
+// handleResizeGrid handles the resizing of the grid based on specified size
+func (m *MapMaker) handleResizeGrid(tileSmallerBtn Button, tileLargerBtn Button, widthSmallerBtn Button, widthLargerBtn Button, heightSmallerBtn Button, heightLargerBtn Button) {
+	if m.isButtonClicked(tileSmallerBtn) {
+		if m.uiState.tileSize > 8 {
+			m.uiState.tileSize--
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(tileLargerBtn) {
+		if m.uiState.tileSize < 64 {
+			m.uiState.tileSize++
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+
+	if m.isButtonClicked(widthSmallerBtn) {
+		if m.uiState.gridWidth > 10 {
+			m.uiState.gridWidth--
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(widthLargerBtn) {
+		if m.uiState.gridWidth < 100 {
+			m.uiState.gridWidth++
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(heightSmallerBtn) {
+		if m.uiState.gridHeight > 10 {
+			m.uiState.gridHeight--
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+	if m.isButtonClicked(heightLargerBtn) {
+		if m.uiState.gridHeight < 100 {
+			m.uiState.gridHeight++
+			m.updateGridSize()
+			m.resizeGrid()
+		}
+	}
+}
+
+// resizeGrid resizes the grid its current dimensions
 func (m *MapMaker) resizeGrid() {
-	// Create new slices with proper dimensions
 	newTiles := make([][]beam.TileType, m.tileGrid.Height)
 	newTextures := make([][][]string, m.tileGrid.Height)
 	newRotations := make([][][]float64, m.tileGrid.Height)
@@ -607,14 +624,12 @@ func (m *MapMaker) resizeGrid() {
 		newTextures[i] = make([][]string, m.tileGrid.Width)
 		newRotations[i] = make([][]float64, m.tileGrid.Width)
 
-		// Initialize empty slices for each cell
 		for j := range newTextures[i] {
 			newTextures[i][j] = make([]string, 0)
 			newRotations[i][j] = make([]float64, 0)
 		}
 	}
 
-	// Copy existing data
 	for y := 0; y < min(len(m.tileGrid.Tiles), m.tileGrid.Height); y++ {
 		for x := 0; x < min(len(m.tileGrid.Tiles[y]), m.tileGrid.Width); x++ {
 			newTiles[y][x] = m.tileGrid.Tiles[y][x]
@@ -630,6 +645,7 @@ func (m *MapMaker) resizeGrid() {
 	m.tileGrid.TextureRotations = newRotations
 }
 
+// initTileGrid initializes the tile grid with default values
 func (m *MapMaker) initTileGrid() {
 	m.tileGrid.Tiles = make([][]beam.TileType, m.tileGrid.Height)
 	m.tileGrid.Textures = make([][][]string, m.tileGrid.Height)
@@ -648,12 +664,15 @@ func (m *MapMaker) initTileGrid() {
 	}
 }
 
-func (m *MapMaker) calculateGridSize() {
-	// Use manual grid dimensions instead of calculating from window size
+// updateGridSize updates the grid size based on the UI state
+func (m *MapMaker) updateGridSize() {
 	m.tileGrid.Width = m.uiState.gridWidth
 	m.tileGrid.Height = m.uiState.gridHeight
 }
 
+// loadResource loads a resource into the resource manager
+// Supports loading both spritesheets and individual textures
+// For spritesheets, it will display the spritesheet viewer to confirm options
 func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, sheetMargin int32, gridSize int32) error {
 	newRes := resources.Resource{
 		Name:        name,
@@ -682,17 +701,14 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 }
 
 func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
-	// Grid size controls (first row)
 	widthSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	widthLargerBtn = m.NewButton(85, 8, 30, 20, "+")
 	heightSmallerBtn = m.NewButton(10, 33, 30, 20, "-")
 	heightLargerBtn = m.NewButton(85, 33, 30, 20, "+")
-
-	// Tile size controls (second row)
 	tileSmallerBtn = m.NewButton(10, 58, 30, 20, "-")
 	tileLargerBtn = m.NewButton(85, 58, 30, 20, "+")
 
-	// Icon buttons
+	// Load, save, close buttons
 	loadBtn = m.NewIconButton(
 		float32(m.window.width-160),
 		15,
@@ -720,6 +736,8 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["close"].Width), Height: float32(m.uiState.uiTextures["close"].Height)},
 		"Close Map",
 	)
+
+	// Resource viewer / loader buttons
 	loadResourceBtn = m.NewIconButton(
 		float32(m.window.width-245),
 		15,
@@ -739,7 +757,7 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		"View Textures",
 	)
 
-	// These are paintbrush, paintbucket, and eraser icons
+	// These are tool icons
 	paintbrushBtn = m.NewIconButton(
 		170,
 		15,
@@ -796,7 +814,6 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 	case 3:
 		locationTooltip = "Exit"
 	}
-
 	locationBtn = m.NewIconButton(
 		420,
 		15,
@@ -810,6 +827,7 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 	return
 }
 
+// handleTextureSelect handles the selection of a texture from the resource viewer
 func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 	m.uiState.activeTexture = texInfo
 
@@ -821,8 +839,6 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 			return
 		}
 	}
-
-	// Add new texture to front
 	m.uiState.recentTextures = append([]string{texInfo.Name}, m.uiState.recentTextures...)
 
 	// Keep only last 8 textures
@@ -832,9 +848,8 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 }
 
 func (m *MapMaker) Close() {
-	// So we can reopen the last file
+	// Save the config to reopen the last file
 	SaveConfig(m.currentFile)
-
 	for _, tex := range m.uiState.uiTextures {
 		rl.UnloadTexture(tex)
 	}
