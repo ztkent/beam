@@ -1,19 +1,19 @@
 # TODO
 
+- i need 'complex' textures. via tile select menu
+  - Scale textures larger. so i place them in one tile but they can be larger than the tile.
+  - i need alternating textures. so i can place them in a grid and they alternate. kind of an animation.
 
-- Let me create huge maps, but scroll around the viewport at a given size
-- Changing the resolution shouldnt perm remove tiles and textures.
-  - Idea of a viewport
+- item tiles. that way we can keep the textures, tiles, and items separate.
+  - i have had issues trying to overuse the tilemap, best to have many copies i think.
+
+- some texture packs are different dimensions throughout the pack.
+  - i dont know if i will reasonably choose to support this.
 
 - Add color picker - alternative to texture
 
-- fix resource viewer scroll
 - when first loading assets, pull them into a local cache (.cache)
   - refer to the local cache for using
 - when saving/loading a project include their assets
 
-- when loading a save, if we can not find a referenced asset, display a popup with the error
-        - allow the user to update the path
-
 - export it as a spritesheet
-- right click + hold to swap to pencil eraser (one layer erase)
