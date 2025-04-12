@@ -81,7 +81,7 @@ func (s *UIState) reload() {
 
 	newSprites := []resources.Resource{
 		{
-			Name:        "spritesheet",
+			Name:        "s",
 			Path:        s.CurrentFile,
 			IsSheet:     true,
 			SheetMargin: int32(s.Margin),
