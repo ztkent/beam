@@ -69,12 +69,19 @@ func (m *MapMaker) renderGrid() {
 			if tile.X >= viewStartX && tile.X < viewEndX && tile.Y >= viewStartY && tile.Y < viewEndY {
 				highlightX := startX + (tile.X-viewStartX)*m.uiState.tileSize
 				highlightY := startY + (tile.Y-viewStartY)*m.uiState.tileSize
+
+				// Highlight red if its an eraser
+				color := rl.Black
+				if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
+					color = rl.Red
+				}
+
 				rl.DrawRectangleLinesEx(rl.Rectangle{
 					X:      float32(highlightX),
 					Y:      float32(highlightY),
 					Width:  float32(m.uiState.tileSize),
 					Height: float32(m.uiState.tileSize),
-				}, 2, rl.Black)
+				}, 2, color)
 			}
 		}
 	}
