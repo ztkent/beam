@@ -4,6 +4,13 @@
 
 ## Features
 
+- Core Game Features
+  - [x] Game state management (Menu, Game, Pause, Settings, etc.)
+  - [x] Tile-based map system with support for:
+    - Multiple tile types (Walls, Floors, Objects)
+    - Complex multi-frame textures with transitions
+    - Custom tile properties (rotation, scale, offset, tinting)
+    - Map metadata (start, exit, respawn points)
 - Map editor
   - [x] Design, save, and export beam-compatible pixel maps
   - [x] Grid-based tile editor with resizable canvas

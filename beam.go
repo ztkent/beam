@@ -1,6 +1,10 @@
 package beam
 
-import "image/color"
+import (
+	"image/color"
+
+	rl "github.com/gen2brain/raylib-go/raylib"
+)
 
 type GameState int
 
@@ -37,19 +41,9 @@ const (
 	ChestTile
 )
 
-type TileTexture struct {
-	Name     string
-	Rotation float64
-	Scale    float64
-	OffsetX  float64
-	OffsetY  float64
-	Tint     color.RGBA
-}
-
-type Tile struct {
-	Type     TileType
-	Pos      Position
-	Textures []TileTexture
+type Viewport struct {
+	X, Y                    int
+	WidthTiles, HeightTiles int
 }
 
 type Map struct {
@@ -61,7 +55,40 @@ type Map struct {
 	DungeonEntry  Positions
 }
 
-type Viewport struct {
-	X, Y                    int
-	WidthTiles, HeightTiles int
+type Tile struct {
+	Type     TileType
+	Pos      Position
+	Textures []TileTexture
+}
+
+type TileTexture struct {
+	Frames []TileTextureFrame
+
+	// Complex textures can have multiple frames, with a transition
+	IsComplex bool
+}
+
+type TileTextureFrame struct {
+	Name     string
+	Rotation float64
+	Scale    float64
+	OffsetX  float64
+	OffsetY  float64
+	Tint     color.RGBA
+}
+
+func NewSimpleTileTexture(name string) TileTexture {
+	return TileTexture{
+		Frames: []TileTextureFrame{
+			{
+				Name:     name,
+				Rotation: 0,
+				Scale:    1,
+				OffsetX:  0,
+				OffsetY:  0,
+				Tint:     rl.White,
+			},
+		},
+		IsComplex: false,
+	}
 }

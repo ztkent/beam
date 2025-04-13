@@ -5,7 +5,6 @@
   - i need alternating textures. so i can place them in a grid and they alternate. kind of an animation.
 
 - item tiles. that way we can keep the textures, tiles, and items separate.
-  - i have had issues trying to overuse the tilemap, best to have many copies i think.
 
 - some texture packs are different dimensions throughout the pack.
   - i dont know if i will reasonably choose to support this.

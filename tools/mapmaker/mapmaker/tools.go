@@ -126,8 +126,44 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 
 		// Compare each texture in the pattern
 		for i, tex := range targetTile.Textures {
-			if tex.Name != sourceTile.Textures[i].Name {
+			sourceTex := sourceTile.Textures[i]
+
+			// Check if both textures are complex or simple
+			if tex.IsComplex != sourceTex.IsComplex {
 				return false
+			}
+
+			// Compare frames if complex
+			if tex.IsComplex {
+				if len(tex.Frames) != len(sourceTex.Frames) {
+					return false
+				}
+				for j, frame := range tex.Frames {
+					sourceFrame := sourceTex.Frames[j]
+					if frame.Name != sourceFrame.Name ||
+						frame.Rotation != sourceFrame.Rotation ||
+						frame.Scale != sourceFrame.Scale ||
+						frame.OffsetX != sourceFrame.OffsetX ||
+						frame.OffsetY != sourceFrame.OffsetY ||
+						frame.Tint != sourceFrame.Tint {
+						return false
+					}
+				}
+			} else {
+				// Compare the first frame for simple textures
+				if len(tex.Frames) == 0 || len(sourceTex.Frames) == 0 {
+					return false
+				}
+				frame := tex.Frames[0]
+				sourceFrame := sourceTex.Frames[0]
+				if frame.Name != sourceFrame.Name ||
+					frame.Rotation != sourceFrame.Rotation ||
+					frame.Scale != sourceFrame.Scale ||
+					frame.OffsetX != sourceFrame.OffsetX ||
+					frame.OffsetY != sourceFrame.OffsetY ||
+					frame.Tint != sourceFrame.Tint {
+					return false
+				}
 			}
 		}
 		return true

@@ -301,7 +301,7 @@ func (m *MapMaker) update() {
 
 		// Check if we're clicking within the tile info popup
 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && m.showTileInfo {
-			dialogWidth := 300
+			dialogWidth := 350
 			closeBtn := rl.Rectangle{
 				X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
 				Y:      float32(m.uiState.tileInfoPopupY + 5),
@@ -333,13 +333,7 @@ func (m *MapMaker) update() {
 						m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
 						m.tileGrid.Tiles[selectedY][selectedX].Textures = append(
 							m.tileGrid.Tiles[selectedY][selectedX].Textures,
-							beam.TileTexture{
-								Name:     m.uiState.activeTexture.Name,
-								Rotation: 0.0,
-								Scale:    1.0,
-								OffsetX:  0.0,
-								OffsetY:  0.0,
-							},
+							beam.NewSimpleTileTexture(m.uiState.activeTexture.Name),
 						)
 					}
 				}
@@ -356,7 +350,15 @@ func (m *MapMaker) update() {
 					selectedY := int(pos.Y)
 					tile := &m.tileGrid.Tiles[selectedY][selectedX]
 					if len(tile.Textures) > 0 {
-						tile.Textures = tile.Textures[:len(tile.Textures)-1]
+						lastTexture := &tile.Textures[len(tile.Textures)-1]
+						if lastTexture.IsComplex && len(lastTexture.Frames) > 0 {
+							lastTexture.Frames = lastTexture.Frames[:len(lastTexture.Frames)-1]
+							if len(lastTexture.Frames) == 0 {
+								tile.Textures = tile.Textures[:len(tile.Textures)-1]
+							}
+						} else {
+							tile.Textures = tile.Textures[:len(tile.Textures)-1]
+						}
 					}
 				}
 			case "select":
@@ -690,8 +692,8 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 	widthLargerBtn = m.NewButton(85, 8, 30, 20, "+")
 	heightSmallerBtn = m.NewButton(10, 33, 30, 20, "-")
 	heightLargerBtn = m.NewButton(85, 33, 30, 20, "+")
-	tileSmallerBtn = m.NewButton(10, 58, 30, 20, "-")
-	tileLargerBtn = m.NewButton(85, 58, 30, 20, "+")
+	tileSmallerBtn = m.NewButton(10, 64, 30, 20, "-")
+	tileLargerBtn = m.NewButton(85, 64, 30, 20, "+")
 
 	// Load, save, close buttons
 	loadBtn = m.NewIconButton(

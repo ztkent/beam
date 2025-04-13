@@ -147,8 +147,10 @@ func (m *MapMaker) ValidateTileGrid() error {
 	for y, textureY := range m.tileGrid.Tiles {
 		for x, tile := range textureY {
 			for _, texture := range tile.Textures {
-				if _, err := m.resources.GetTexture("default", texture.Name); err != nil {
-					newGrid = append(newGrid, MissingResource{tile: beam.Position{X: x, Y: y}, textureName: texture.Name})
+				for _, frame := range texture.Frames {
+					if _, err := m.resources.GetTexture("default", frame.Name); err != nil {
+						newGrid = append(newGrid, MissingResource{tile: beam.Position{X: x, Y: y}, textureName: frame.Name})
+					}
 				}
 			}
 		}

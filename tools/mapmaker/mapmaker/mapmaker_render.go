@@ -195,52 +195,58 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 	}
 
 	for _, tex := range tile.Textures {
-		if tex.Name == "" {
-			continue
-		} else if m.tileGrid.missingResourceTiles.Contains(pos2d, tex.Name) {
-			// Draw yellow outline for missing resource
-			rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
+		if len(tex.Frames) == 0 {
 			continue
 		}
 
-		// Center the texture in the tile
-		origin := rl.Vector2{
-			X: float32(m.uiState.tileSize) / 2,
-			Y: float32(m.uiState.tileSize) / 2,
-		}
+		for _, frame := range tex.Frames {
+			if frame.Name == "" {
+				continue
+			} else if m.tileGrid.missingResourceTiles.Contains(pos2d, frame.Name) {
+				// Draw yellow outline for missing resource
+				rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
+				continue
+			}
 
-		info, err := m.resources.GetTexture("default", tex.Name)
-		if err != nil {
-			fmt.Println("Error getting texture:", err)
-			continue
-		}
+			// Center the texture in the tile
+			origin := rl.Vector2{
+				X: float32(m.uiState.tileSize) / 2,
+				Y: float32(m.uiState.tileSize) / 2,
+			}
 
-		// Apply scale, tint and offset to the destination rectangle
-		if tex.Scale == 0 {
-			tex.Scale = 1
-		}
+			info, err := m.resources.GetTexture("default", frame.Name)
+			if err != nil {
+				fmt.Println("Error getting texture:", err)
+				continue
+			}
 
-		// Adjust destination rectangle to use center-based rotation with scale and offset
-		destRect := rl.Rectangle{
-			X:      pos.X + pos.Width/2 + float32(tex.OffsetX*float64(m.uiState.tileSize)),
-			Y:      pos.Y + pos.Height/2 + float32(tex.OffsetY*float64(m.uiState.tileSize)),
-			Width:  pos.Width * float32(tex.Scale),
-			Height: pos.Height * float32(tex.Scale),
-		}
+			// Apply scale, tint, and offset to the destination rectangle
+			if frame.Scale == 0 {
+				frame.Scale = 1
+			}
 
-		// Add the tint
-		if tex.Tint == (rl.Color{}) {
-			tex.Tint = rl.White
-		}
+			// Adjust destination rectangle to use center-based rotation with scale and offset
+			destRect := rl.Rectangle{
+				X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(m.uiState.tileSize)),
+				Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(m.uiState.tileSize)),
+				Width:  pos.Width * float32(frame.Scale),
+				Height: pos.Height * float32(frame.Scale),
+			}
 
-		rl.DrawTexturePro(
-			info.Texture,
-			info.Region,
-			destRect,
-			origin,
-			float32(tex.Rotation),
-			tex.Tint,
-		)
+			// Add the tint
+			if frame.Tint == (rl.Color{}) {
+				frame.Tint = rl.White
+			}
+
+			rl.DrawTexturePro(
+				info.Texture,
+				info.Region,
+				destRect,
+				origin,
+				float32(frame.Rotation),
+				frame.Tint,
+			)
+		}
 	}
 
 	if tile.Type == beam.WallTile {
@@ -289,7 +295,7 @@ func (m *MapMaker) renderUI() {
 
 	m.drawButton(tileSmallerBtn, rl.White)
 	m.drawButton(tileLargerBtn, rl.White)
-	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 62, 12, rl.DarkGray)
+	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 68, 12, rl.DarkGray)
 
 	// Draw new grid control buttons
 	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
@@ -750,8 +756,8 @@ func (m *MapMaker) renderResourceViewer() {
 
 func (m *MapMaker) renderTileInfoPopup() {
 	pos := m.uiState.tileInfoPos
-	dialogWidth := 300
-	dialogHeight := 200
+	dialogWidth := 350
+	dialogHeight := 300
 
 	// Handle dragging
 	mousePos := rl.GetMousePosition()
@@ -803,28 +809,36 @@ func (m *MapMaker) renderTileInfoPopup() {
 	textY := m.uiState.tileInfoPopupY + padding
 
 	// Draw tile type
-	tileType := m.tileGrid.Tiles[pos.Y][pos.X].Type
-	rl.DrawText(fmt.Sprintf("Tile Type: %d", tileType), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
+	tile := m.tileGrid.Tiles[pos.Y][pos.X]
+	rl.DrawText(fmt.Sprintf("Tile Type: %d", tile.Type), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
+	textY += 25
+
+	// Draw tile position
+	rl.DrawText(fmt.Sprintf("Position: (%d, %d)", tile.Pos.X, tile.Pos.Y), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 25
 
 	// Draw textures
 	rl.DrawText("Textures:", m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 20
 
-	textures := m.tileGrid.Tiles[pos.Y][pos.X].Textures
-
-	for _, tex := range textures {
-		warningText := ""
-		textColor := rl.DarkGray
-
-		if m.tileGrid.missingResourceTiles.Contains(pos, tex.Name) {
-			warningText = " !"
-			textColor = rl.Yellow
-		}
-
-		rl.DrawText(fmt.Sprintf("- %s (%.1f°)%s", tex.Name, tex.Rotation, warningText),
-			m.uiState.tileInfoPopupX+padding+10, textY, 14, textColor)
+	for _, tex := range tile.Textures {
+		rl.DrawText(fmt.Sprintf("- Complex: %t", tex.IsComplex), m.uiState.tileInfoPopupX+padding+10, textY, 14, rl.DarkGray)
 		textY += 20
+
+		for _, frame := range tex.Frames {
+			warningText := ""
+			textColor := rl.DarkGray
+
+			if m.tileGrid.missingResourceTiles.Contains(pos, frame.Name) {
+				warningText = " !"
+				textColor = rl.Yellow
+			}
+
+			rl.DrawText(fmt.Sprintf("  - %s (%.1f°) Scale: %.2f Offset: (%.2f, %.2f)%s",
+				frame.Name, frame.Rotation, frame.Scale, frame.OffsetX, frame.OffsetY, warningText),
+				m.uiState.tileInfoPopupX+padding+5, textY, 12, textColor)
+			textY += 20
+		}
 	}
 
 	// Draw close button
