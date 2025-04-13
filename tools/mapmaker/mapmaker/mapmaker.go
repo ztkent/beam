@@ -336,6 +336,9 @@ func (m *MapMaker) update() {
 							beam.TileTexture{
 								Name:     m.uiState.activeTexture.Name,
 								Rotation: 0.0,
+								Scale:    1.0,
+								OffsetX:  0.0,
+								OffsetY:  0.0,
 							},
 						)
 					}
@@ -369,9 +372,9 @@ func (m *MapMaker) update() {
 				for _, pos := range m.tileGrid.selectedTiles {
 					selectedX := int(pos.X)
 					selectedY := int(pos.Y)
-					tileType := beam.FloorTile // Ground
+					tileType := beam.FloorTile
 					if m.uiState.hasSwappedLayers {
-						tileType = beam.WallTile // Wall
+						tileType = beam.WallTile
 					}
 					m.tileGrid.Tiles[selectedY][selectedX].Type = tileType
 				}
@@ -423,7 +426,6 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 			m.uiState.selectedTool = ""
 		} else {
 			name := "eraser"
-			// Use pencileraser if swapped
 			if m.uiState.hasSwappedEraser {
 				name = "pencileraser"
 			}
@@ -463,7 +465,6 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 		if m.uiState.rightClickStartTime == 0 {
 			m.uiState.rightClickStartTime = rl.GetTime()
 		} else if rl.GetTime()-m.uiState.rightClickStartTime > 0.5 {
-			// Handle eraser swap
 			if m.uiState.selectedTool == "eraser" || m.uiState.selectedTool == "pencileraser" {
 				m.uiState.uiTextures["eraser"], m.uiState.uiTextures["pencileraser"] =
 					m.uiState.uiTextures["pencileraser"], m.uiState.uiTextures["eraser"]
