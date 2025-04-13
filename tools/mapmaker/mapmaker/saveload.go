@@ -92,18 +92,6 @@ func (m *MapMaker) SaveMap(filename string) error {
 	return os.WriteFile(filename, jsonData, 0644)
 }
 
-// OldMap represents the previous map format for backward compatibility
-type OldMap struct {
-	Width, Height    int
-	Tiles            [][]beam.TileType
-	Textures         [][][]string
-	TextureRotations [][][]float64
-	Start            beam.Position
-	Exit             beam.Position
-	Respawn          beam.Position
-	DungeonEntry     beam.Positions
-}
-
 func (m *MapMaker) LoadMap(filename string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -111,74 +99,8 @@ func (m *MapMaker) LoadMap(filename string) error {
 	}
 
 	var saveData SaveData
-
-	// Try to unmarshal with new format first
-	err = json.Unmarshal(data, &saveData)
-	if err != nil {
-		// If it fails, try loading as old format
-		var oldSaveData struct {
-			TileGrid struct {
-				OldMap
-				offset               beam.Position
-				hasSelection         bool
-				selectedTiles        beam.Positions
-				missingResourceTiles MissingResources
-				viewportOffset       beam.Position
-				viewportWidth        int
-				viewportHeight       int
-			} `json:"tileGrid"`
-			TileSize       int                     `json:"tileSize"`
-			ResourceState  resources.ResourceState `json:"resourceState"`
-			RecentTextures []string                `json:"recentTextures"`
-		}
-
-		if err := json.Unmarshal(data, &oldSaveData); err != nil {
-			return err
-		}
-
-		// Convert old format to new format
-		saveData.TileSize = oldSaveData.TileSize
-		saveData.ResourceState = oldSaveData.ResourceState
-		saveData.RecentTextures = oldSaveData.RecentTextures
-
-		// Convert tile grid
-		saveData.TileGrid = &TileGrid{
-			offset:               oldSaveData.TileGrid.offset,
-			hasSelection:         oldSaveData.TileGrid.hasSelection,
-			selectedTiles:        oldSaveData.TileGrid.selectedTiles,
-			missingResourceTiles: oldSaveData.TileGrid.missingResourceTiles,
-			viewportOffset:       oldSaveData.TileGrid.viewportOffset,
-			viewportWidth:        oldSaveData.TileGrid.viewportWidth,
-			viewportHeight:       oldSaveData.TileGrid.viewportHeight,
-			Map: beam.Map{
-				Width:        oldSaveData.TileGrid.Width,
-				Height:       oldSaveData.TileGrid.Height,
-				Start:        oldSaveData.TileGrid.Start,
-				Exit:         oldSaveData.TileGrid.Exit,
-				Respawn:      oldSaveData.TileGrid.Respawn,
-				DungeonEntry: oldSaveData.TileGrid.DungeonEntry,
-			},
-		}
-
-		// Convert tiles
-		saveData.TileGrid.Tiles = make([][]beam.Tile, oldSaveData.TileGrid.Height)
-		for y := range saveData.TileGrid.Tiles {
-			saveData.TileGrid.Tiles[y] = make([]beam.Tile, oldSaveData.TileGrid.Width)
-			for x := range saveData.TileGrid.Tiles[y] {
-				var textures []beam.TileTexture
-				for i, texName := range oldSaveData.TileGrid.Textures[y][x] {
-					textures = append(textures, beam.TileTexture{
-						Name:     texName,
-						Rotation: oldSaveData.TileGrid.TextureRotations[y][x][i],
-					})
-				}
-				saveData.TileGrid.Tiles[y][x] = beam.Tile{
-					Type:     oldSaveData.TileGrid.Tiles[y][x],
-					Pos:      beam.Position{X: x, Y: y},
-					Textures: textures,
-				}
-			}
-		}
+	if err := json.Unmarshal(data, &saveData); err != nil {
+		return err
 	}
 
 	// Close existing resources before loading new state
@@ -204,9 +126,6 @@ func (m *MapMaker) LoadMap(filename string) error {
 	m.currentFile = filename
 
 	// Update grid data directly
-	m.tileGrid.Width = saveData.TileGrid.Width
-	m.tileGrid.Height = saveData.TileGrid.Height
-	m.initTileGrid()
 	m.tileGrid = saveData.TileGrid
 
 	if m.currentFile != "" {
@@ -215,7 +134,7 @@ func (m *MapMaker) LoadMap(filename string) error {
 		rl.SetWindowTitle(m.window.title)
 	}
 
-	// Validate the tile grid to ensure all textures are loaded, if not add to missing list
+	// Validate the tile grid to ensure all textures are loaded
 	m.ValidateTileGrid()
 	return nil
 }
