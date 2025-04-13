@@ -35,15 +35,27 @@ const (
 	ChestTile
 )
 
+type TileTexture struct {
+	Name     string
+	Rotation float64
+	Scale    float64
+	OffsetX  float64
+	OffsetY  float64
+}
+
+type Tile struct {
+	Type     TileType
+	Pos      Position
+	Textures []TileTexture
+}
+
 type Map struct {
-	Width, Height    int
-	Tiles            [][]TileType
-	Textures         [][][]string
-	TextureRotations [][][]float64
-	Start            Position
-	Exit             Position
-	Respawn          Position
-	DungeonEntry     Positions
+	Width, Height int
+	Tiles         [][]Tile
+	Start         Position
+	Exit          Position
+	Respawn       Position
+	DungeonEntry  Positions
 }
 
 type Viewport struct {

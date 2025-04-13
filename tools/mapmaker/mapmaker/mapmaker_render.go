@@ -51,12 +51,9 @@ func (m *MapMaker) renderGrid() {
 				Height: float32(m.uiState.tileSize),
 			}
 
-			// Draw all textures at this location
-			for i, textureName := range m.tileGrid.Textures[y][x] {
-				rotateFloor := float64(m.tileGrid.TextureRotations[y][x][i])
-				tile := beam.Position{X: x, Y: y}
-				m.renderGridTile(pos, tile, textureName, rotateFloor)
-			}
+			// Render tile at this location
+			tile := m.tileGrid.Tiles[y][x]
+			m.renderGridTile(pos, beam.Position{X: x, Y: y}, tile)
 		}
 	}
 
@@ -192,60 +189,67 @@ func (m *MapMaker) renderViewportControls() {
 	}
 }
 
-func (m *MapMaker) renderGridTile(pos rl.Rectangle, tile beam.Position, textureName string, rotate float64) {
-	if textureName == "" {
-		return
-	} else if m.tileGrid.missingResourceTiles.Contains(tile, textureName) {
-		// Draw yellow outline for missing resource
-		rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
+func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile beam.Tile) {
+	if len(tile.Textures) == 0 {
 		return
 	}
 
-	// Center the texture in the tile
-	origin := rl.Vector2{
-		X: float32(m.uiState.tileSize) / 2,
-		Y: float32(m.uiState.tileSize) / 2,
+	for _, tex := range tile.Textures {
+		if tex.Name == "" {
+			continue
+		} else if m.tileGrid.missingResourceTiles.Contains(pos2d, tex.Name) {
+			// Draw yellow outline for missing resource
+			rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
+			continue
+		}
+
+		// Center the texture in the tile
+		origin := rl.Vector2{
+			X: float32(m.uiState.tileSize) / 2,
+			Y: float32(m.uiState.tileSize) / 2,
+		}
+
+		info, err := m.resources.GetTexture("default", tex.Name)
+		if err != nil {
+			fmt.Println("Error getting texture:", err)
+			continue
+		}
+
+		// Adjust destination rectangle to use center-based rotation
+		destRect := rl.Rectangle{
+			X:      pos.X + pos.Width/2,
+			Y:      pos.Y + pos.Height/2,
+			Width:  pos.Width,
+			Height: pos.Height,
+		}
+
+		rl.DrawTexturePro(
+			info.Texture,
+			info.Region,
+			destRect,
+			origin,
+			float32(tex.Rotation),
+			rl.White,
+		)
 	}
 
-	info, err := m.resources.GetTexture("default", textureName)
-	if err != nil {
-		fmt.Println("Error getting texture:", err)
-		return
-	}
-
-	// Adjust destination rectangle to use center-based rotation
-	destRect := rl.Rectangle{
-		X:      pos.X + pos.Width/2,
-		Y:      pos.Y + pos.Height/2,
-		Width:  pos.Width,
-		Height: pos.Height,
-	}
-
-	rl.DrawTexturePro(
-		info.Texture,
-		info.Region,
-		destRect,
-		origin,
-		float32(rotate),
-		rl.White,
-	)
-
-	if m.tileGrid.Tiles[tile.Y][tile.X] == beam.WallTile {
+	if tile.Type == beam.WallTile {
 		rl.DrawRectangleLinesEx(pos, 2, rl.Brown)
 	}
 
-	if tile.X != 0 && tile.Y != 0 {
-		// TODO: the rest of the outlines
-		if tile.X == m.tileGrid.Start.X && tile.Y == m.tileGrid.Start.Y {
+	// Draw special tile outlines
+	if pos2d.X != 0 && pos2d.Y != 0 {
+		switch {
+		case pos2d.X == m.tileGrid.Start.X && pos2d.Y == m.tileGrid.Start.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Green)
-		} else if tile.X == m.tileGrid.Exit.X && tile.Y == m.tileGrid.Exit.Y {
+		case pos2d.X == m.tileGrid.Exit.X && pos2d.Y == m.tileGrid.Exit.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Red)
-		} else if tile.X == m.tileGrid.Respawn.X && tile.Y == m.tileGrid.Respawn.Y {
+		case pos2d.X == m.tileGrid.Respawn.X && pos2d.Y == m.tileGrid.Respawn.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Blue)
 		}
 
 		for _, entry := range m.tileGrid.DungeonEntry {
-			if tile.X == entry.X && tile.Y == entry.Y {
+			if pos2d.X == entry.X && pos2d.Y == entry.Y {
 				rl.DrawRectangleLinesEx(pos, 2, rl.Purple)
 			}
 		}
@@ -789,7 +793,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 	textY := m.uiState.tileInfoPopupY + padding
 
 	// Draw tile type
-	tileType := m.tileGrid.Tiles[pos.Y][pos.X]
+	tileType := m.tileGrid.Tiles[pos.Y][pos.X].Type
 	rl.DrawText(fmt.Sprintf("Tile Type: %d", tileType), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 25
 
@@ -797,20 +801,18 @@ func (m *MapMaker) renderTileInfoPopup() {
 	rl.DrawText("Textures:", m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 20
 
-	textures := m.tileGrid.Textures[pos.Y][pos.X]
-	rotations := m.tileGrid.TextureRotations[pos.Y][pos.X]
+	textures := m.tileGrid.Tiles[pos.Y][pos.X].Textures
 
-	for i, tex := range textures {
-		rotation := rotations[i]
+	for _, tex := range textures {
 		warningText := ""
 		textColor := rl.DarkGray
 
-		if m.tileGrid.missingResourceTiles.Contains(pos, tex) {
+		if m.tileGrid.missingResourceTiles.Contains(pos, tex.Name) {
 			warningText = " !"
 			textColor = rl.Yellow
 		}
 
-		rl.DrawText(fmt.Sprintf("- %s (%.1f°)%s", tex, rotation, warningText),
+		rl.DrawText(fmt.Sprintf("- %s (%.1f°)%s", tex.Name, tex.Rotation, warningText),
 			m.uiState.tileInfoPopupX+padding+10, textY, 14, textColor)
 		textY += 20
 	}

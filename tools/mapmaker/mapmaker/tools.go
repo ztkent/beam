@@ -104,7 +104,7 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 	}
 
 	// Get the source tile's texture pattern
-	sourceTile := m.tileGrid.Textures[startY][startX]
+	sourceTile := m.tileGrid.Tiles[startY][startX]
 
 	// Create a visited map
 	visited := make(map[string]bool)
@@ -118,15 +118,15 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 			return false
 		}
 
-		targetTile := m.tileGrid.Textures[y][x]
+		targetTile := m.tileGrid.Tiles[y][x]
 
-		if len(targetTile) != len(sourceTile) {
+		if len(targetTile.Textures) != len(sourceTile.Textures) {
 			return false
 		}
 
 		// Compare each texture in the pattern
-		for i, tex := range targetTile {
-			if tex != sourceTile[i] {
+		for i, tex := range targetTile.Textures {
+			if tex.Name != sourceTile.Textures[i].Name {
 				return false
 			}
 		}

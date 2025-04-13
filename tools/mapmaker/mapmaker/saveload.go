@@ -92,6 +92,18 @@ func (m *MapMaker) SaveMap(filename string) error {
 	return os.WriteFile(filename, jsonData, 0644)
 }
 
+// OldMap represents the previous map format for backward compatibility
+type OldMap struct {
+	Width, Height    int
+	Tiles            [][]beam.TileType
+	Textures         [][][]string
+	TextureRotations [][][]float64
+	Start            beam.Position
+	Exit             beam.Position
+	Respawn          beam.Position
+	DungeonEntry     beam.Positions
+}
+
 func (m *MapMaker) LoadMap(filename string) error {
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -99,8 +111,74 @@ func (m *MapMaker) LoadMap(filename string) error {
 	}
 
 	var saveData SaveData
-	if err := json.Unmarshal(data, &saveData); err != nil {
-		return err
+
+	// Try to unmarshal with new format first
+	err = json.Unmarshal(data, &saveData)
+	if err != nil {
+		// If it fails, try loading as old format
+		var oldSaveData struct {
+			TileGrid struct {
+				OldMap
+				offset               beam.Position
+				hasSelection         bool
+				selectedTiles        beam.Positions
+				missingResourceTiles MissingResources
+				viewportOffset       beam.Position
+				viewportWidth        int
+				viewportHeight       int
+			} `json:"tileGrid"`
+			TileSize       int                     `json:"tileSize"`
+			ResourceState  resources.ResourceState `json:"resourceState"`
+			RecentTextures []string                `json:"recentTextures"`
+		}
+
+		if err := json.Unmarshal(data, &oldSaveData); err != nil {
+			return err
+		}
+
+		// Convert old format to new format
+		saveData.TileSize = oldSaveData.TileSize
+		saveData.ResourceState = oldSaveData.ResourceState
+		saveData.RecentTextures = oldSaveData.RecentTextures
+
+		// Convert tile grid
+		saveData.TileGrid = &TileGrid{
+			offset:               oldSaveData.TileGrid.offset,
+			hasSelection:         oldSaveData.TileGrid.hasSelection,
+			selectedTiles:        oldSaveData.TileGrid.selectedTiles,
+			missingResourceTiles: oldSaveData.TileGrid.missingResourceTiles,
+			viewportOffset:       oldSaveData.TileGrid.viewportOffset,
+			viewportWidth:        oldSaveData.TileGrid.viewportWidth,
+			viewportHeight:       oldSaveData.TileGrid.viewportHeight,
+			Map: beam.Map{
+				Width:        oldSaveData.TileGrid.Width,
+				Height:       oldSaveData.TileGrid.Height,
+				Start:        oldSaveData.TileGrid.Start,
+				Exit:         oldSaveData.TileGrid.Exit,
+				Respawn:      oldSaveData.TileGrid.Respawn,
+				DungeonEntry: oldSaveData.TileGrid.DungeonEntry,
+			},
+		}
+
+		// Convert tiles
+		saveData.TileGrid.Tiles = make([][]beam.Tile, oldSaveData.TileGrid.Height)
+		for y := range saveData.TileGrid.Tiles {
+			saveData.TileGrid.Tiles[y] = make([]beam.Tile, oldSaveData.TileGrid.Width)
+			for x := range saveData.TileGrid.Tiles[y] {
+				var textures []beam.TileTexture
+				for i, texName := range oldSaveData.TileGrid.Textures[y][x] {
+					textures = append(textures, beam.TileTexture{
+						Name:     texName,
+						Rotation: oldSaveData.TileGrid.TextureRotations[y][x][i],
+					})
+				}
+				saveData.TileGrid.Tiles[y][x] = beam.Tile{
+					Type:     oldSaveData.TileGrid.Tiles[y][x],
+					Pos:      beam.Position{X: x, Y: y},
+					Textures: textures,
+				}
+			}
+		}
 	}
 
 	// Close existing resources before loading new state
@@ -147,11 +225,11 @@ func (m *MapMaker) ValidateTileGrid() error {
 	newGrid := make(MissingResources, 0)
 	// Scan the grid, and make sure that any referenced textures are loaded.
 	// If we cant find them, add them to the missing textures list.
-	for y, textureY := range m.tileGrid.Textures {
-		for x, textureX := range textureY {
-			for _, texture := range textureX {
-				if _, err := m.resources.GetTexture("default", texture); err != nil {
-					newGrid = append(newGrid, MissingResource{tile: beam.Position{X: x, Y: y}, textureName: texture})
+	for y, textureY := range m.tileGrid.Tiles {
+		for x, tile := range textureY {
+			for _, texture := range tile.Textures {
+				if _, err := m.resources.GetTexture("default", texture.Name); err != nil {
+					newGrid = append(newGrid, MissingResource{tile: beam.Position{X: x, Y: y}, textureName: texture.Name})
 				}
 			}
 		}
@@ -159,6 +237,7 @@ func (m *MapMaker) ValidateTileGrid() error {
 	m.tileGrid.missingResourceTiles = newGrid
 	return nil
 }
+
 func openLoadDialog() string {
 	var cmd *exec.Cmd
 

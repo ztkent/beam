@@ -330,28 +330,30 @@ func (m *MapMaker) update() {
 					for _, pos := range m.tileGrid.selectedTiles {
 						selectedX := int(pos.X)
 						selectedY := int(pos.Y)
-						tileType := beam.TileType(1)
-						m.tileGrid.Tiles[selectedY][selectedX] = tileType
-						m.tileGrid.Textures[selectedY][selectedX] = append(m.tileGrid.Textures[selectedY][selectedX], m.uiState.activeTexture.Name)
-						m.tileGrid.TextureRotations[selectedY][selectedX] = append(m.tileGrid.TextureRotations[selectedY][selectedX], 0.0)
+						m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
+						m.tileGrid.Tiles[selectedY][selectedX].Textures = append(
+							m.tileGrid.Tiles[selectedY][selectedX].Textures,
+							beam.TileTexture{
+								Name:     m.uiState.activeTexture.Name,
+								Rotation: 0.0,
+							},
+						)
 					}
 				}
 			case "eraser":
 				for _, pos := range m.tileGrid.selectedTiles {
 					selectedX := int(pos.X)
 					selectedY := int(pos.Y)
-					tileType := beam.TileType(0)
-					m.tileGrid.Tiles[selectedY][selectedX] = tileType
-					m.tileGrid.Textures[selectedY][selectedX] = make([]string, 0)
-					m.tileGrid.TextureRotations[selectedY][selectedX] = make([]float64, 0)
+					m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
+					m.tileGrid.Tiles[selectedY][selectedX].Textures = nil
 				}
 			case "pencileraser":
 				for _, pos := range m.tileGrid.selectedTiles {
 					selectedX := int(pos.X)
 					selectedY := int(pos.Y)
-					if len(m.tileGrid.Textures[selectedY][selectedX]) > 0 {
-						m.tileGrid.Textures[selectedY][selectedX] = m.tileGrid.Textures[selectedY][selectedX][:len(m.tileGrid.Textures[selectedY][selectedX])-1]
-						m.tileGrid.TextureRotations[selectedY][selectedX] = m.tileGrid.TextureRotations[selectedY][selectedX][:len(m.tileGrid.TextureRotations[selectedY][selectedX])-1]
+					tile := &m.tileGrid.Tiles[selectedY][selectedX]
+					if len(tile.Textures) > 0 {
+						tile.Textures = tile.Textures[:len(tile.Textures)-1]
 					}
 				}
 			case "select":
@@ -367,11 +369,11 @@ func (m *MapMaker) update() {
 				for _, pos := range m.tileGrid.selectedTiles {
 					selectedX := int(pos.X)
 					selectedY := int(pos.Y)
-					tileType := beam.TileType(1) // Ground
+					tileType := beam.FloorTile // Ground
 					if m.uiState.hasSwappedLayers {
-						tileType = beam.TileType(0) // Wall
+						tileType = beam.WallTile // Wall
 					}
-					m.tileGrid.Tiles[selectedY][selectedX] = tileType
+					m.tileGrid.Tiles[selectedY][selectedX].Type = tileType
 				}
 				break
 			case "location":
@@ -615,51 +617,33 @@ func (m *MapMaker) handleResizeGrid(tileSmallerBtn Button, tileLargerBtn Button,
 
 // resizeGrid resizes the grid its current dimensions
 func (m *MapMaker) resizeGrid() {
-	newTiles := make([][]beam.TileType, m.tileGrid.Height)
-	newTextures := make([][][]string, m.tileGrid.Height)
-	newRotations := make([][][]float64, m.tileGrid.Height)
-
+	newTiles := make([][]beam.Tile, m.tileGrid.Height)
 	for i := range newTiles {
-		newTiles[i] = make([]beam.TileType, m.tileGrid.Width)
-		newTextures[i] = make([][]string, m.tileGrid.Width)
-		newRotations[i] = make([][]float64, m.tileGrid.Width)
-
-		for j := range newTextures[i] {
-			newTextures[i][j] = make([]string, 0)
-			newRotations[i][j] = make([]float64, 0)
-		}
+		newTiles[i] = make([]beam.Tile, m.tileGrid.Width)
 	}
 
+	// Copy existing tiles
 	for y := 0; y < min(len(m.tileGrid.Tiles), m.tileGrid.Height); y++ {
 		for x := 0; x < min(len(m.tileGrid.Tiles[y]), m.tileGrid.Width); x++ {
 			newTiles[y][x] = m.tileGrid.Tiles[y][x]
-			if y < len(m.tileGrid.Textures) && x < len(m.tileGrid.Textures[y]) {
-				newTextures[y][x] = append([]string{}, m.tileGrid.Textures[y][x]...)
-				newRotations[y][x] = append([]float64{}, m.tileGrid.TextureRotations[y][x]...)
-			}
+			newTiles[y][x].Pos = beam.Position{X: x, Y: y}
 		}
 	}
 
 	m.tileGrid.Tiles = newTiles
-	m.tileGrid.Textures = newTextures
-	m.tileGrid.TextureRotations = newRotations
 }
 
 // initTileGrid initializes the tile grid with default values
 func (m *MapMaker) initTileGrid() {
-	m.tileGrid.Tiles = make([][]beam.TileType, m.tileGrid.Height)
-	m.tileGrid.Textures = make([][][]string, m.tileGrid.Height)
-	m.tileGrid.TextureRotations = make([][][]float64, m.tileGrid.Height)
-
+	m.tileGrid.Tiles = make([][]beam.Tile, m.tileGrid.Height)
 	for i := range m.tileGrid.Tiles {
-		m.tileGrid.Tiles[i] = make([]beam.TileType, m.tileGrid.Width)
-		m.tileGrid.Textures[i] = make([][]string, m.tileGrid.Width)
-		m.tileGrid.TextureRotations[i] = make([][]float64, m.tileGrid.Width)
-	}
-	for i := range m.tileGrid.Textures {
-		for j := range m.tileGrid.Textures[i] {
-			m.tileGrid.Textures[i][j] = make([]string, 0)
-			m.tileGrid.TextureRotations[i][j] = make([]float64, 0)
+		m.tileGrid.Tiles[i] = make([]beam.Tile, m.tileGrid.Width)
+		for j := range m.tileGrid.Tiles[i] {
+			m.tileGrid.Tiles[i][j] = beam.Tile{
+				Type:     beam.FloorTile,
+				Pos:      beam.Position{X: j, Y: i},
+				Textures: make([]beam.TileTexture, 0),
+			}
 		}
 	}
 }
