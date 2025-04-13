@@ -1,5 +1,7 @@
 package beam
 
+import "image/color"
+
 type GameState int
 
 const (
@@ -41,6 +43,7 @@ type TileTexture struct {
 	Scale    float64
 	OffsetX  float64
 	OffsetY  float64
+	Tint     color.RGBA
 }
 
 type Tile struct {

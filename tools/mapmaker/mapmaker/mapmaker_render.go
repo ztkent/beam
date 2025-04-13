@@ -215,18 +215,22 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 			continue
 		}
 
-		// Apply scale and offset to the destination rectangle
-		scale := float32(tex.Scale)
-		if scale == 0 {
-			scale = 1
+		// Apply scale, tint and offset to the destination rectangle
+		if tex.Scale == 0 {
+			tex.Scale = 1
 		}
 
 		// Adjust destination rectangle to use center-based rotation with scale and offset
 		destRect := rl.Rectangle{
 			X:      pos.X + pos.Width/2 + float32(tex.OffsetX*float64(m.uiState.tileSize)),
 			Y:      pos.Y + pos.Height/2 + float32(tex.OffsetY*float64(m.uiState.tileSize)),
-			Width:  pos.Width * scale,
-			Height: pos.Height * scale,
+			Width:  pos.Width * float32(tex.Scale),
+			Height: pos.Height * float32(tex.Scale),
+		}
+
+		// Add the tint
+		if tex.Tint == (rl.Color{}) {
+			tex.Tint = rl.White
 		}
 
 		rl.DrawTexturePro(
@@ -235,7 +239,7 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 			destRect,
 			origin,
 			float32(tex.Rotation),
-			rl.White,
+			tex.Tint,
 		)
 	}
 
