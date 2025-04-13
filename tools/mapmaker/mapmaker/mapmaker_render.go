@@ -295,7 +295,7 @@ func (m *MapMaker) renderUI() {
 
 	m.drawButton(tileSmallerBtn, rl.White)
 	m.drawButton(tileLargerBtn, rl.White)
-	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 68, 12, rl.DarkGray)
+	rl.DrawText(fmt.Sprintf("%dpx", m.uiState.tileSize), 48, 62, 12, rl.DarkGray)
 
 	// Draw new grid control buttons
 	m.drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
@@ -834,20 +834,33 @@ func (m *MapMaker) renderTileInfoPopup() {
 				textColor = rl.Yellow
 			}
 
-			rl.DrawText(fmt.Sprintf("  - %s (%.1f°) Scale: %.2f Offset: (%.2f, %.2f)%s",
-				frame.Name, frame.Rotation, frame.Scale, frame.OffsetX, frame.OffsetY, warningText),
+			rl.DrawText(fmt.Sprintf("  - %s (%.1f°) Scale: %.2f Offset: (%.2f, %.2f)",
+				frame.Name, frame.Rotation, frame.Scale, frame.OffsetX, frame.OffsetY),
 				m.uiState.tileInfoPopupX+padding+5, textY, 12, textColor)
-			textY += 20
+			textY += 15
+
+			// Add tint information on next line, indented further
+			rl.DrawText(fmt.Sprintf("    Tint: R:%d G:%d B:%d A:%d%s",
+				frame.Tint.R, frame.Tint.G, frame.Tint.B, frame.Tint.A, warningText),
+				m.uiState.tileInfoPopupX+padding+5, textY, 12, textColor)
+			textY += 25
 		}
 	}
 
-	// Draw close button
+	// Draw close button with corrected position
 	closeBtn := rl.Rectangle{
-		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
+		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30), // Position stays relative to new width
 		Y:      float32(m.uiState.tileInfoPopupY + 5),
 		Width:  25,
 		Height: 25,
 	}
+
+	// Draw the X button
 	rl.DrawRectangleRec(closeBtn, rl.LightGray)
 	rl.DrawText("×", int32(closeBtn.X+7), int32(closeBtn.Y+2), 20, rl.DarkGray)
+
+	// Check for clicks on close button when not dragging
+	if !m.uiState.isDraggingPopup && rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.showTileInfo = false
+	}
 }
