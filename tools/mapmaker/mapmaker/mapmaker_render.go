@@ -2,6 +2,7 @@ package mapmaker
 
 import (
 	"fmt"
+	"strconv"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/ztkent/beam"
@@ -225,11 +226,6 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 			if err != nil {
 				fmt.Println("Error getting texture:", err)
 				continue
-			}
-
-			// Apply scale, tint, and offset to the destination rectangle
-			if frame.Scale == 0 {
-				frame.Scale = 1
 			}
 
 			// Adjust destination rectangle to use center-based rotation with scale and offset
@@ -828,8 +824,38 @@ func (m *MapMaker) renderTileInfoPopup() {
 	rl.DrawText("Textures:", m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 20
 
-	for _, tex := range tile.Textures {
-		rl.DrawText(fmt.Sprintf("- Complex: %t", tex.IsComplex), m.uiState.tileInfoPopupX+padding+10, textY, 14, rl.DarkGray)
+	for texIndex, tex := range tile.Textures {
+		// Draw complex text and edit button side by side
+		complexText := fmt.Sprintf("- Complex: %t", tex.IsComplex)
+		rl.DrawText(complexText, m.uiState.tileInfoPopupX+padding+10, textY, 14, rl.DarkGray)
+
+		// Create edit button beside the complex text
+		editBtn := rl.Rectangle{
+			X:      float32(m.uiState.tileInfoPopupX + padding + 10 + rl.MeasureText(complexText, 14) + 10),
+			Y:      float32(textY),
+			Width:  30,
+			Height: 15,
+		}
+		rl.DrawRectangleRec(editBtn, rl.LightGray)
+		rl.DrawText("Edit", int32(editBtn.X+5), int32(editBtn.Y+2), 10, rl.Black)
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.textureEditor = &TextureEditorState{
+				visible:       true,
+				tile:          &m.tileGrid.Tiles[pos.Y][pos.X],
+				texIndex:      texIndex,
+				frameIndex:    0,
+				rotation:      fmt.Sprintf("%.1f", tex.Frames[0].Rotation),
+				scale:         fmt.Sprintf("%.2f", tex.Frames[0].Scale),
+				offsetX:       fmt.Sprintf("%.2f", tex.Frames[0].OffsetX),
+				offsetY:       fmt.Sprintf("%.2f", tex.Frames[0].OffsetY),
+				tintR:         fmt.Sprintf("%d", tex.Frames[0].Tint.R),
+				tintG:         fmt.Sprintf("%d", tex.Frames[0].Tint.G),
+				tintB:         fmt.Sprintf("%d", tex.Frames[0].Tint.B),
+				tintA:         fmt.Sprintf("%d", tex.Frames[0].Tint.A),
+				clearedInputs: make(map[string]bool),
+			}
+		}
 		textY += 20
 
 		for _, frame := range tex.Frames {
@@ -856,7 +882,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 
 	// Draw close button with corrected position
 	closeBtn := rl.Rectangle{
-		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30), // Position stays relative to new width
+		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
 		Y:      float32(m.uiState.tileInfoPopupY + 5),
 		Width:  25,
 		Height: 25,
@@ -869,5 +895,202 @@ func (m *MapMaker) renderTileInfoPopup() {
 	// Check for clicks on close button when not dragging
 	if !m.uiState.isDraggingPopup && rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		m.showTileInfo = false
+	}
+
+	// Render texture editor if active
+	if m.uiState.textureEditor != nil && m.uiState.textureEditor.visible {
+		m.renderTextureEditor()
+	}
+}
+
+type TextureEditorState struct {
+	tile          *beam.Tile
+	visible       bool
+	texIndex      int
+	frameIndex    int
+	rotation      string
+	scale         string
+	offsetX       string
+	offsetY       string
+	tintR         string
+	tintG         string
+	tintB         string
+	tintA         string
+	clearedInputs map[string]bool
+}
+
+func (m *MapMaker) renderTextureEditor() {
+	editor := m.uiState.textureEditor
+	if editor.clearedInputs == nil {
+		editor.clearedInputs = make(map[string]bool)
+	}
+
+	dialogWidth := 300
+	dialogHeight := 350
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw dialog background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Title
+	rl.DrawText("Edit Texture Properties", int32(dialogX+10), int32(dialogY+10), 20, rl.Black)
+
+	// Input fields
+	y := dialogY + 50
+	padding := 20
+	labelWidth := 80
+	inputWidth := 100
+	inputHeight := 30
+
+	// Helper function to create input field
+	createInput := func(label string, value *string, yPos int) {
+		rl.DrawText(label, int32(dialogX+padding), int32(yPos+8), 16, rl.Black)
+		inputRect := rl.Rectangle{
+			X:      float32(dialogX + padding + labelWidth),
+			Y:      float32(yPos),
+			Width:  float32(inputWidth),
+			Height: float32(inputHeight),
+		}
+		rl.DrawRectangleRec(inputRect, rl.LightGray)
+		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
+
+		// Handle input focus and text input
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeInput = label
+		}
+		if m.uiState.activeInput == label {
+			rl.DrawRectangleLinesEx(inputRect, 2, rl.Blue)
+
+			// Clear value on first keypress if not already cleared
+			key := rl.GetCharPressed()
+			if !editor.clearedInputs[label] && key > 0 {
+				*value = ""
+				editor.clearedInputs[label] = true
+			}
+
+			for key > 0 {
+				if key >= 32 && key <= 126 {
+					*value += string(key)
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Create all input fields
+	createInput("Rotation", &editor.rotation, y)
+	y += inputHeight + padding
+	createInput("Scale", &editor.scale, y)
+	y += inputHeight + padding
+	createInput("Offset X", &editor.offsetX, y)
+	y += inputHeight + padding
+	createInput("Offset Y", &editor.offsetY, y)
+	y += inputHeight + padding
+
+	// Consolidated tint inputs
+	tintLabel := "Tint RGBA:"
+	rl.DrawText(tintLabel, int32(dialogX+padding)-10, int32(y+8), 16, rl.Black)
+
+	tintWidth := 45
+	tintSpacing := 5
+	tintX := dialogX + padding + labelWidth
+
+	// Draw tint input boxes in a row
+	drawTintInput := func(value *string, x float32) rl.Rectangle {
+		rect := rl.Rectangle{
+			X:      x,
+			Y:      float32(y),
+			Width:  float32(tintWidth),
+			Height: float32(inputHeight),
+		}
+		rl.DrawRectangleRec(rect, rl.LightGray)
+		rl.DrawText(*value, int32(rect.X+5), int32(rect.Y+8), 16, rl.Black)
+		return rect
+	}
+
+	rRect := drawTintInput(&editor.tintR, float32(tintX))
+	gRect := drawTintInput(&editor.tintG, float32(tintX+tintWidth+tintSpacing))
+	bRect := drawTintInput(&editor.tintB, float32(tintX+2*(tintWidth+tintSpacing)))
+	aRect := drawTintInput(&editor.tintA, float32(tintX+3*(tintWidth+tintSpacing)))
+
+	// Handle input focus for tint fields
+	for idx, rect := range []rl.Rectangle{rRect, gRect, bRect, aRect} {
+		label := []string{"TintR", "TintG", "TintB", "TintA"}[idx]
+		value := []*string{&editor.tintR, &editor.tintG, &editor.tintB, &editor.tintA}[idx]
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), rect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeInput = label
+		}
+		if m.uiState.activeInput == label {
+			rl.DrawRectangleLinesEx(rect, 2, rl.Blue)
+
+			// Clear value on first keypress if not already cleared
+			key := rl.GetCharPressed()
+			if !editor.clearedInputs[label] && key > 0 {
+				*value = ""
+				editor.clearedInputs[label] = true
+			}
+
+			for key > 0 {
+				if key >= 32 && key <= 126 {
+					*value += string(key)
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Save/Cancel buttons
+	btnWidth := 80
+	btnHeight := 30
+	saveBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - btnWidth*2 - padding*2),
+		Y:      float32(dialogY + dialogHeight - btnHeight - padding),
+		Width:  float32(btnWidth),
+		Height: float32(btnHeight),
+	}
+	cancelBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - btnWidth - padding),
+		Y:      float32(dialogY + dialogHeight - btnHeight - padding),
+		Width:  float32(btnWidth),
+		Height: float32(btnHeight),
+	}
+
+	rl.DrawRectangleRec(saveBtn, rl.LightGray)
+	rl.DrawRectangleRec(cancelBtn, rl.LightGray)
+	rl.DrawText("Save", int32(saveBtn.X+20), int32(saveBtn.Y+8), 16, rl.Black)
+	rl.DrawText("Cancel", int32(cancelBtn.X+15), int32(cancelBtn.Y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.textureEditor = nil
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Update the texture frame with new values
+		frame := &editor.tile.Textures[editor.texIndex].Frames[editor.frameIndex]
+		frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
+		frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
+		frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
+		frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
+		r, _ := strconv.Atoi(editor.tintR)
+		g, _ := strconv.Atoi(editor.tintG)
+		b, _ := strconv.Atoi(editor.tintB)
+		a, _ := strconv.Atoi(editor.tintA)
+		frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+		m.uiState.textureEditor = nil
 	}
 }

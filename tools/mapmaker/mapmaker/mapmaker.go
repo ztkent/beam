@@ -69,6 +69,10 @@ type UIState struct {
 	// Grid Width/Height Controls
 	gridWidth  int
 	gridHeight int
+
+	// Tile Editor Popup
+	textureEditor *TextureEditorState
+	activeInput   string
 }
 
 type TileGrid struct {
