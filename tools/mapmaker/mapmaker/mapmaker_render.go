@@ -840,6 +840,8 @@ func (m *MapMaker) renderTileInfoPopup() {
 		rl.DrawText("Edit", int32(editBtn.X+5), int32(editBtn.Y+2), 10, rl.Black)
 
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.closeAllEditors()
+			m.showTileInfo = true // Keep tile info open
 			m.uiState.textureEditor = &TextureEditorState{
 				visible:       true,
 				tile:          &m.tileGrid.Tiles[pos.Y][pos.X],
@@ -1058,13 +1060,19 @@ func (m *MapMaker) renderTextureEditor() {
 	btnWidth := 80
 	btnHeight := 30
 	saveBtn := rl.Rectangle{
-		X:      float32(dialogX + dialogWidth - btnWidth*2 - padding*2),
+		X:      float32(dialogX + dialogWidth - btnWidth*3 - padding*2 - 8),
 		Y:      float32(dialogY + dialogHeight - btnHeight - padding),
 		Width:  float32(btnWidth),
 		Height: float32(btnHeight),
 	}
 	cancelBtn := rl.Rectangle{
-		X:      float32(dialogX + dialogWidth - btnWidth - padding),
+		X:      float32(dialogX + dialogWidth - btnWidth*2 - padding - 8),
+		Y:      float32(dialogY + dialogHeight - btnHeight - padding),
+		Width:  float32(btnWidth),
+		Height: float32(btnHeight),
+	}
+	advancedBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - btnWidth - 8),
 		Y:      float32(dialogY + dialogHeight - btnHeight - padding),
 		Width:  float32(btnWidth),
 		Height: float32(btnHeight),
@@ -1072,11 +1080,14 @@ func (m *MapMaker) renderTextureEditor() {
 
 	rl.DrawRectangleRec(saveBtn, rl.LightGray)
 	rl.DrawRectangleRec(cancelBtn, rl.LightGray)
+	rl.DrawRectangleRec(advancedBtn, rl.LightGray)
 	rl.DrawText("Save", int32(saveBtn.X+20), int32(saveBtn.Y+8), 16, rl.Black)
 	rl.DrawText("Cancel", int32(cancelBtn.X+15), int32(cancelBtn.Y+8), 16, rl.Black)
+	rl.DrawText("Advanced", int32(advancedBtn.X+4), int32(advancedBtn.Y+8), 16, rl.Black)
 
+	// Handle button clicks
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		m.uiState.textureEditor = nil
+		m.closeTextureEditor()
 	}
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
@@ -1091,6 +1102,69 @@ func (m *MapMaker) renderTextureEditor() {
 		b, _ := strconv.Atoi(editor.tintB)
 		a, _ := strconv.Atoi(editor.tintA)
 		frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
-		m.uiState.textureEditor = nil
+		m.closeTextureEditor()
 	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), advancedBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.showAdvancedEditor = true
+	}
+	if m.uiState.showAdvancedEditor {
+		m.renderAdvancedEditor()
+	}
+}
+
+func (m *MapMaker) renderAdvancedEditor() {
+	dialogWidth := 600
+	dialogHeight := 500
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw dialog background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Back button
+	backBtn := rl.Rectangle{
+		X:      float32(dialogX + 10),
+		Y:      float32(dialogY + 10),
+		Width:  80,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(backBtn, rl.LightGray)
+	rl.DrawText("Back", int32(backBtn.X+20), int32(backBtn.Y+8), 16, rl.Black)
+
+	// Exit button
+	exitBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 90),
+		Y:      float32(dialogY + 10),
+		Width:  80,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(exitBtn, rl.Red)
+	rl.DrawText("Exit", int32(exitBtn.X+25), int32(exitBtn.Y+8), 16, rl.White)
+
+	// Handle button clicks
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), backBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.showAdvancedEditor = false
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), exitBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.closeAllEditors()
+	}
+}
+
+func (m *MapMaker) closeTextureEditor() {
+	m.uiState.textureEditor = nil
+	m.uiState.showAdvancedEditor = false
+}
+
+func (m *MapMaker) closeAllEditors() {
+	m.closeTextureEditor()
+	m.showTileInfo = false
 }
