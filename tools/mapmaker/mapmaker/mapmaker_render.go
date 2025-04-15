@@ -1226,15 +1226,59 @@ func (m *MapMaker) renderAdvancedEditor() {
 		}
 	}
 
-	// Animation Time Input
-	createAdvInput("Anim Time (s):", &editor.advAnimationTimeStr, contentY, "advAnimTime")
+	// Animation Time Input - Disable if frameCount is 1
+	animTimeLabelColor := rl.Black
+	animTimeInputColor := rl.LightGray
+	animTimeTextColor := rl.Black
+	frameCount, _ := strconv.Atoi(editor.advFrameCountStr)
+	isAnimTimeDisabled := frameCount == 1
+
+	if isAnimTimeDisabled {
+		animTimeLabelColor = rl.Gray
+		animTimeInputColor = rl.DarkGray
+		animTimeTextColor = rl.Gray
+		if m.uiState.activeInput == "advAnimTime" {
+			m.uiState.activeInput = ""
+		}
+	}
+
+	rl.DrawText("Anim Time (s):", int32(dialogX+padding), int32(contentY+8), 16, animTimeLabelColor)
+	animTimeInputRect := rl.Rectangle{
+		X:      float32(dialogX + padding + labelWidth),
+		Y:      float32(contentY),
+		Width:  float32(inputWidth),
+		Height: float32(inputHeight),
+	}
+	rl.DrawRectangleRec(animTimeInputRect, animTimeInputColor)
+	rl.DrawText(editor.advAnimationTimeStr, int32(animTimeInputRect.X+5), int32(animTimeInputRect.Y+8), 16, animTimeTextColor)
+
+	if !isAnimTimeDisabled {
+		// Handle input focus and text input only if not disabled
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), animTimeInputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeInput = "advAnimTime"
+		}
+		if m.uiState.activeInput == "advAnimTime" {
+			rl.DrawRectangleLinesEx(animTimeInputRect, 2, rl.Blue)
+
+			key := rl.GetCharPressed()
+			for key > 0 {
+				if (key >= '0' && key <= '9') || key == '.' {
+					editor.advAnimationTimeStr += string(key)
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(editor.advAnimationTimeStr) > 0 {
+				editor.advAnimationTimeStr = editor.advAnimationTimeStr[:len(editor.advAnimationTimeStr)-1]
+			}
+		}
+	}
 	contentY += inputHeight + padding
 
 	// Frame Count Input
 	createAdvInput("Frame Count:", &editor.advFrameCountStr, contentY, "advFrameCount")
 	contentY += inputHeight + padding
 
-	// Parse frame count
+	// Re-parse frame count and validate
 	frameCount, err := strconv.Atoi(editor.advFrameCountStr)
 	if err != nil || frameCount <= 0 {
 		frameCount = 0
@@ -1336,7 +1380,12 @@ func (m *MapMaker) renderAdvancedEditor() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtnAdv) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Validate inputs
-		animTime, timeErr := strconv.ParseFloat(editor.advAnimationTimeStr, 64)
+		animTime := 0.0 // Default value
+		var timeErr error
+		if frameCount > 0 { // Only parse animTime if frameCount is greater than 0
+			animTime, timeErr = strconv.ParseFloat(editor.advAnimationTimeStr, 64)
+		}
+
 		allFramesSelected := true
 		if frameCount <= 0 {
 			allFramesSelected = false
@@ -1348,7 +1397,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 			}
 		}
 
-		if timeErr == nil && animTime > 0 && allFramesSelected {
+		if (frameCount == 1 || (timeErr == nil && animTime > 0)) && allFramesSelected {
 			// Apply changes to the TileTexture
 			if editor.texIndex < len(editor.tile.Textures) {
 				tex := &editor.tile.Textures[editor.texIndex]
@@ -1367,8 +1416,8 @@ func (m *MapMaker) renderAdvancedEditor() {
 					originalTint = originalFrame.Tint
 				}
 
-				tex.IsComplex = true // Ensure IsComplex is set
-				tex.AnimationTime = animTime
+				tex.IsComplex = frameCount > 1
+				tex.AnimationTime = animTime                              // Will be 0 if frameCount is 1
 				tex.CurrentFrame = 0                                      // Reset animation state
 				tex.Frames = make([]beam.TileTextureFrame, 0, frameCount) // Clear existing frames
 
@@ -1384,7 +1433,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 					tex.Frames = append(tex.Frames, newFrame)
 				}
 
-				m.showToast("Complex texture saved!", ToastSuccess)
+				m.showToast("Texture properties saved!", ToastSuccess)
 				m.uiState.showAdvancedEditor = false // Close advanced editor on successful save
 				m.uiState.textureEditor = nil        // Close simple texture editor as well
 				m.uiState.activeInput = ""
@@ -1394,7 +1443,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 		} else {
 			// Show error message
 			errMsg := "Invalid input:"
-			if timeErr != nil || animTime <= 0 {
+			if frameCount != 1 && (timeErr != nil || animTime <= 0) {
 				errMsg += " Invalid time."
 			}
 			if frameCount <= 0 {
@@ -1411,11 +1460,11 @@ func (m *MapMaker) renderAdvancedEditor() {
 func (m *MapMaker) closeTextureEditor() {
 	m.uiState.textureEditor = nil
 	m.uiState.showAdvancedEditor = false
-	m.uiState.activeInput = "" // Ensure input focus is cleared
+	m.uiState.activeInput = ""
 }
 
 func (m *MapMaker) closeAllEditors() {
-	m.closeTextureEditor() // This already handles clearing advanced editor state
+	m.closeTextureEditor()
 	m.showTileInfo = false
-	m.uiState.activeInput = "" // Ensure input focus is cleared
+	m.uiState.activeInput = ""
 }
