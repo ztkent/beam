@@ -346,7 +346,7 @@ func (m *MapMaker) update() {
 						selectedY := int(pos.Y)
 						tile := &m.tileGrid.Tiles[selectedY][selectedX]
 						if len(tile.Textures) > 0 {
-							lastTexture := &tile.Textures[len(tile.Textures)-1]
+							lastTexture := tile.Textures[len(tile.Textures)-1]
 							if lastTexture.IsComplex && len(lastTexture.Frames) > 0 {
 								lastTexture.Frames = lastTexture.Frames[:len(lastTexture.Frames)-1]
 								if len(lastTexture.Frames) == 0 {
@@ -644,7 +644,7 @@ func (m *MapMaker) initTileGrid() {
 			m.tileGrid.Tiles[i][j] = beam.Tile{
 				Type:     beam.FloorTile,
 				Pos:      beam.Position{X: j, Y: i},
-				Textures: make([]beam.TileTexture, 0),
+				Textures: make([]*beam.TileTexture, 0),
 			}
 		}
 	}

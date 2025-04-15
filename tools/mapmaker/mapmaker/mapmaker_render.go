@@ -207,40 +207,69 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 			continue
 		}
 
-		for _, frame := range tex.Frames {
-			if frame.Name == "" {
-				continue
-			} else if m.tileGrid.missingResourceTiles.Contains(pos2d, frame.Name) {
-				// Draw yellow outline for missing resource
-				rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
-				continue
-			}
+		// If the texture isn't complex, we can just draw the frames on top of each other.
+		if !tex.IsComplex {
+			for _, frame := range tex.Frames {
+				if frame.Name == "" {
+					continue
+				} else if m.tileGrid.missingResourceTiles.Contains(pos2d, frame.Name) {
+					// Draw yellow outline for missing resource
+					rl.DrawRectangleLinesEx(pos, 2, rl.Yellow)
+					continue
+				}
 
-			// Center the texture in the tile
+				// Center the texture in the tile
+				origin := rl.Vector2{
+					X: float32(m.uiState.tileSize) / 2,
+					Y: float32(m.uiState.tileSize) / 2,
+				}
+
+				info, err := m.resources.GetTexture("default", frame.Name)
+				if err != nil {
+					fmt.Println("Error getting texture:", err)
+					continue
+				}
+
+				// Adjust destination rectangle to use center-based rotation with scale and offset
+				destRect := rl.Rectangle{
+					X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(m.uiState.tileSize)),
+					Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(m.uiState.tileSize)),
+					Width:  pos.Width * float32(frame.Scale),
+					Height: pos.Height * float32(frame.Scale),
+				}
+
+				// Add the tint
+				if frame.Tint == (rl.Color{}) {
+					frame.Tint = rl.White
+				}
+
+				rl.DrawTexturePro(
+					info.Texture,
+					info.Region,
+					destRect,
+					origin,
+					float32(frame.Rotation),
+					frame.Tint,
+				)
+			}
+		} else {
+			// If the texture is complex, we need draw the current frame for the animation time.
+			frame := tex.GetCurrentFrame(rl.GetTime())
 			origin := rl.Vector2{
 				X: float32(m.uiState.tileSize) / 2,
 				Y: float32(m.uiState.tileSize) / 2,
 			}
-
 			info, err := m.resources.GetTexture("default", frame.Name)
 			if err != nil {
 				fmt.Println("Error getting texture:", err)
 				continue
 			}
-
-			// Adjust destination rectangle to use center-based rotation with scale and offset
 			destRect := rl.Rectangle{
 				X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(m.uiState.tileSize)),
 				Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(m.uiState.tileSize)),
 				Width:  pos.Width * float32(frame.Scale),
 				Height: pos.Height * float32(frame.Scale),
 			}
-
-			// Add the tint
-			if frame.Tint == (rl.Color{}) {
-				frame.Tint = rl.White
-			}
-
 			rl.DrawTexturePro(
 				info.Texture,
 				info.Region,
@@ -1153,7 +1182,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), advancedBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Initialize advanced editor state when opening it
-		tex := &editor.tile.Textures[editor.texIndex]
+		tex := editor.tile.Textures[editor.texIndex]
 		if tex.IsComplex && len(tex.Frames) > 0 {
 			editor.advAnimationTimeStr = fmt.Sprintf("%.2f", tex.AnimationTime)
 			editor.advFrameCountStr = fmt.Sprintf("%d", len(tex.Frames))
@@ -1430,7 +1459,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 		if (frameCount == 1 || (timeErr == nil && animTime > 0)) && allFramesSelected {
 			// Apply changes to the TileTexture
 			if editor.texIndex < len(editor.tile.Textures) {
-				tex := &editor.tile.Textures[editor.texIndex]
+				tex := editor.tile.Textures[editor.texIndex]
 				// Use properties from the *original* first frame if available, otherwise defaults
 				originalRotation := 0.0
 				originalScale := 1.0

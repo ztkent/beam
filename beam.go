@@ -56,7 +56,7 @@ type Map struct {
 type Tile struct {
 	Type     TileType
 	Pos      Position
-	Textures []TileTexture
+	Textures []*TileTexture
 }
 
 type TileTexture struct {
@@ -66,6 +66,19 @@ type TileTexture struct {
 	IsComplex     bool
 	AnimationTime float64
 	CurrentFrame  int
+
+	lastFrameTime float64
+}
+
+func (t *TileTexture) GetCurrentFrame(currentTime float64) TileTextureFrame {
+	if t.IsComplex {
+		if currentTime-t.lastFrameTime >= t.AnimationTime {
+			t.CurrentFrame = (t.CurrentFrame + 1) % len(t.Frames)
+			t.lastFrameTime = currentTime
+		}
+		return t.Frames[t.CurrentFrame]
+	}
+	return t.Frames[0]
 }
 
 type TileTextureFrame struct {
@@ -77,8 +90,8 @@ type TileTextureFrame struct {
 	Tint     rl.Color
 }
 
-func NewSimpleTileTexture(name string) TileTexture {
-	return TileTexture{
+func NewSimpleTileTexture(name string) *TileTexture {
+	return &TileTexture{
 		Frames: []TileTextureFrame{
 			{
 				Name:     name,
