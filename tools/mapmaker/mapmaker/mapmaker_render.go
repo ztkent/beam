@@ -843,20 +843,52 @@ func (m *MapMaker) renderTileInfoPopup() {
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			m.closeAllEditors()
 			m.showTileInfo = true // Keep tile info open
-			m.uiState.textureEditor = &TextureEditorState{
+
+			// Initialize base editor state
+			editor := &TextureEditorState{
 				visible:       true,
 				tile:          &m.tileGrid.Tiles[pos.Y][pos.X],
 				texIndex:      texIndex,
 				frameIndex:    0,
-				rotation:      fmt.Sprintf("%.1f", tex.Frames[0].Rotation),
-				scale:         fmt.Sprintf("%.2f", tex.Frames[0].Scale),
-				offsetX:       fmt.Sprintf("%.2f", tex.Frames[0].OffsetX),
-				offsetY:       fmt.Sprintf("%.2f", tex.Frames[0].OffsetY),
-				tintR:         fmt.Sprintf("%d", tex.Frames[0].Tint.R),
-				tintG:         fmt.Sprintf("%d", tex.Frames[0].Tint.G),
-				tintB:         fmt.Sprintf("%d", tex.Frames[0].Tint.B),
-				tintA:         fmt.Sprintf("%d", tex.Frames[0].Tint.A),
 				clearedInputs: make(map[string]bool),
+			}
+
+			// Set up editor fields based on whether texture is complex
+			if tex.IsComplex && len(tex.Frames) > 0 {
+				// Go straight to advanced editor for complex textures
+				editor.advAnimationTimeStr = fmt.Sprintf("%.2f", tex.AnimationTime)
+				editor.advFrameCountStr = fmt.Sprintf("%d", len(tex.Frames))
+				editor.advSelectedFrames = make([]string, len(tex.Frames))
+				for i, frame := range tex.Frames {
+					editor.advSelectedFrames[i] = frame.Name
+				}
+				editor.advSelectingFrameIndex = -1
+				m.uiState.textureEditor = editor
+				m.uiState.showAdvancedEditor = true
+				m.uiState.activeInput = ""
+			} else {
+				// Use simple editor for non-complex textures
+				if len(tex.Frames) > 0 {
+					firstFrame := tex.Frames[0]
+					editor.rotation = fmt.Sprintf("%.1f", firstFrame.Rotation)
+					editor.scale = fmt.Sprintf("%.2f", firstFrame.Scale)
+					editor.offsetX = fmt.Sprintf("%.2f", firstFrame.OffsetX)
+					editor.offsetY = fmt.Sprintf("%.2f", firstFrame.OffsetY)
+					editor.tintR = fmt.Sprintf("%d", firstFrame.Tint.R)
+					editor.tintG = fmt.Sprintf("%d", firstFrame.Tint.G)
+					editor.tintB = fmt.Sprintf("%d", firstFrame.Tint.B)
+					editor.tintA = fmt.Sprintf("%d", firstFrame.Tint.A)
+				} else {
+					editor.rotation = "0.0"
+					editor.scale = "1.0"
+					editor.offsetX = "0.0"
+					editor.offsetY = "0.0"
+					editor.tintR = "255"
+					editor.tintG = "255"
+					editor.tintB = "255"
+					editor.tintA = "255"
+				}
+				m.uiState.textureEditor = editor
 			}
 		}
 		textY += 20
@@ -882,7 +914,6 @@ func (m *MapMaker) renderTileInfoPopup() {
 			textY += 25
 		}
 	}
-
 	// Draw close button with corrected position
 	closeBtn := rl.Rectangle{
 		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
@@ -1369,8 +1400,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 
 	// Handle button clicks
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), backBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		m.uiState.showAdvancedEditor = false
-		m.uiState.activeInput = ""
+		m.closeTextureEditor()
 	}
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), exitBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
