@@ -76,6 +76,9 @@ func (t *TileTexture) GetCurrentFrame(currentTime float64) TileTextureFrame {
 			t.CurrentFrame = (t.CurrentFrame + 1) % len(t.Frames)
 			t.lastFrameTime = currentTime
 		}
+		if t.CurrentFrame >= len(t.Frames) {
+			t.CurrentFrame = 0
+		}
 		return t.Frames[t.CurrentFrame]
 	}
 	return t.Frames[0]
