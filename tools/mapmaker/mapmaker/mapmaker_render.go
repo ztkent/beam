@@ -313,12 +313,12 @@ func (m *MapMaker) renderUI() {
 	// Draw active texture preview box
 	m.renderActiveTexturePreview()
 
-	if m.showResourceViewer {
-		m.renderResourceViewer()
-	}
-
 	if m.showTileInfo {
 		m.renderTileInfoPopup()
+	}
+
+	if m.showResourceViewer {
+		m.renderResourceViewer()
 	}
 
 	// Draw status bar
@@ -326,6 +326,7 @@ func (m *MapMaker) renderUI() {
 		m.window.width, int32(m.uiState.statusBarHeight), rl.RayWhite)
 	rl.DrawLine(0, m.window.height-int32(m.uiState.statusBarHeight),
 		m.window.width, m.window.height-int32(m.uiState.statusBarHeight), rl.LightGray)
+
 }
 
 func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
@@ -527,9 +528,6 @@ func (m *MapMaker) renderResourceViewer() {
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
-	// Draw dialog background and frame
-	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
-
 	// Draw main dialog box with layered borders for a cleaner look
 	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
 	rl.DrawRectangleLinesEx(rl.Rectangle{
@@ -571,7 +569,9 @@ func (m *MapMaker) renderResourceViewer() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		m.showResourceViewer = false
-		return
+		if m.uiState.textureEditor != nil && m.uiState.textureEditor.advSelectingFrameIndex != -1 {
+			m.uiState.textureEditor.advSelectingFrameIndex = -1
+		}
 	}
 
 	// Toggle manage mode when manage button is clicked
@@ -659,6 +659,7 @@ func (m *MapMaker) renderResourceViewer() {
 			}
 			rl.DrawRectangleRec(deleteBtn, rl.Red)
 			rl.DrawText("Delete", int32(deleteBtn.X+5), int32(deleteBtn.Y+6), 14, rl.White)
+
 			// Handle delete button click
 			if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 				err := m.resources.RemoveResource("default", texInfo.Name)
@@ -737,7 +738,8 @@ func (m *MapMaker) renderResourceViewer() {
 			}
 
 			// Highlight active texture
-			if m.uiState.activeTexture != nil && m.uiState.activeTexture.Name == texInfo.Name {
+			if m.uiState.activeTexture != nil && m.uiState.activeTexture.Name == texInfo.Name &&
+				(m.uiState.textureEditor == nil || m.uiState.textureEditor.advSelectingFrameIndex == -1) {
 				rl.DrawRectangleLinesEx(clickArea, 2, rl.Blue)
 			}
 
@@ -748,7 +750,6 @@ func (m *MapMaker) renderResourceViewer() {
 					fmt.Println("Error getting texture:", err)
 				} else {
 					m.handleTextureSelect(&tex)
-					m.showResourceViewer = false
 				}
 			}
 		}
@@ -919,10 +920,19 @@ type TextureEditorState struct {
 	tintB         string
 	tintA         string
 	clearedInputs map[string]bool
+
+	// Advanced Editor State
+	advAnimationTimeStr    string
+	advFrameCountStr       string
+	advSelectedFrames      []string // Stores texture names for each frame
+	advSelectingFrameIndex int      // Index of the frame being selected via resource viewer, -1 if none
 }
 
 func (m *MapMaker) renderTextureEditor() {
 	editor := m.uiState.textureEditor
+	if editor == nil {
+		return
+	}
 	if editor.clearedInputs == nil {
 		editor.clearedInputs = make(map[string]bool)
 	}
@@ -1092,21 +1102,42 @@ func (m *MapMaker) renderTextureEditor() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Update the texture frame with new values
-		frame := &editor.tile.Textures[editor.texIndex].Frames[editor.frameIndex]
-		frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
-		frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
-		frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
-		frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
-		r, _ := strconv.Atoi(editor.tintR)
-		g, _ := strconv.Atoi(editor.tintG)
-		b, _ := strconv.Atoi(editor.tintB)
-		a, _ := strconv.Atoi(editor.tintA)
-		frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+		// Ensure the frame exists before trying to access it
+		if editor.texIndex < len(editor.tile.Textures) && editor.frameIndex < len(editor.tile.Textures[editor.texIndex].Frames) {
+			frame := &editor.tile.Textures[editor.texIndex].Frames[editor.frameIndex]
+			frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
+			frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
+			frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
+			frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
+			r, _ := strconv.Atoi(editor.tintR)
+			g, _ := strconv.Atoi(editor.tintG)
+			b, _ := strconv.Atoi(editor.tintB)
+			a, _ := strconv.Atoi(editor.tintA)
+			frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+		} else {
+			fmt.Println("Error: Texture or frame index out of bounds during save.")
+		}
 		m.closeTextureEditor()
 	}
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), advancedBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Initialize advanced editor state when opening it
+		tex := &editor.tile.Textures[editor.texIndex]
+		if tex.IsComplex && len(tex.Frames) > 0 {
+			editor.advAnimationTimeStr = fmt.Sprintf("%.2f", tex.AnimationTime)
+			editor.advFrameCountStr = fmt.Sprintf("%d", len(tex.Frames))
+			editor.advSelectedFrames = make([]string, len(tex.Frames))
+			for i, frame := range tex.Frames {
+				editor.advSelectedFrames[i] = frame.Name
+			}
+		} else {
+			editor.advAnimationTimeStr = "0.5"           // Default animation time
+			editor.advFrameCountStr = "2"                // Default frame count
+			editor.advSelectedFrames = make([]string, 2) // Initialize based on default count
+		}
+		editor.advSelectingFrameIndex = -1
 		m.uiState.showAdvancedEditor = true
+		m.uiState.activeInput = ""
 	}
 	if m.uiState.showAdvancedEditor {
 		m.renderAdvancedEditor()
@@ -1114,6 +1145,11 @@ func (m *MapMaker) renderTextureEditor() {
 }
 
 func (m *MapMaker) renderAdvancedEditor() {
+	editor := m.uiState.textureEditor
+	if editor == nil {
+		return
+	}
+
 	dialogWidth := 600
 	dialogHeight := 500
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
@@ -1128,6 +1164,9 @@ func (m *MapMaker) renderAdvancedEditor() {
 		Width:  float32(dialogWidth),
 		Height: float32(dialogHeight),
 	}, 1, rl.Gray)
+
+	// Title
+	rl.DrawText("Complex Texture Editor", int32(dialogX+180), int32(dialogY+15), 20, rl.Black)
 
 	// Back button
 	backBtn := rl.Rectangle{
@@ -1149,22 +1188,234 @@ func (m *MapMaker) renderAdvancedEditor() {
 	rl.DrawRectangleRec(exitBtn, rl.Red)
 	rl.DrawText("Exit", int32(exitBtn.X+25), int32(exitBtn.Y+8), 16, rl.White)
 
+	contentY := dialogY + 60
+	padding := 20
+	labelWidth := 120
+	inputWidth := 80
+	inputHeight := 30
+
+	// Helper function for input fields in this context
+	createAdvInput := func(label string, value *string, yPos int, inputID string) {
+		rl.DrawText(label, int32(dialogX+padding), int32(yPos+8), 16, rl.Black)
+		inputRect := rl.Rectangle{
+			X:      float32(dialogX + padding + labelWidth),
+			Y:      float32(yPos),
+			Width:  float32(inputWidth),
+			Height: float32(inputHeight),
+		}
+		rl.DrawRectangleRec(inputRect, rl.LightGray)
+		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
+
+		// Handle input focus and text input
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeInput = inputID
+		}
+		if m.uiState.activeInput == inputID {
+			rl.DrawRectangleLinesEx(inputRect, 2, rl.Blue)
+
+			key := rl.GetCharPressed()
+			for key > 0 {
+				if (key >= '0' && key <= '9') || (inputID == "advAnimTime" && key == '.') {
+					*value += string(key)
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Animation Time Input
+	createAdvInput("Anim Time (s):", &editor.advAnimationTimeStr, contentY, "advAnimTime")
+	contentY += inputHeight + padding
+
+	// Frame Count Input
+	createAdvInput("Frame Count:", &editor.advFrameCountStr, contentY, "advFrameCount")
+	contentY += inputHeight + padding
+
+	// Parse frame count
+	frameCount, err := strconv.Atoi(editor.advFrameCountStr)
+	if err != nil || frameCount <= 0 {
+		frameCount = 0
+		if editor.advFrameCountStr != "" {
+			rl.DrawText("Invalid frame count", int32(dialogX+padding+labelWidth+inputWidth+10), int32(contentY-inputHeight-padding+8), 16, rl.Red)
+		}
+	}
+
+	// Adjust selectedFrames slice size if frameCount changed
+	if len(editor.advSelectedFrames) != frameCount && frameCount >= 0 {
+		newFrames := make([]string, frameCount)
+		copy(newFrames, editor.advSelectedFrames)
+		editor.advSelectedFrames = newFrames
+	}
+
+	// Frame Selection Area
+	rl.DrawText("Animation Frames:", int32(dialogX+padding), int32(contentY), 16, rl.Black)
+	contentY += 30
+
+	framePreviewSize := 40
+	framePadding := 10
+	framesPerRow := (dialogWidth - padding*2) / (framePreviewSize + framePadding)
+	frameStartX := dialogX + padding
+
+	for i := 0; i < frameCount; i++ {
+		row := i / framesPerRow
+		col := i % framesPerRow
+		frameX := frameStartX + col*(framePreviewSize+framePadding)
+		frameY := contentY + row*(framePreviewSize+framePadding)
+
+		frameRect := rl.Rectangle{
+			X:      float32(frameX),
+			Y:      float32(frameY),
+			Width:  float32(framePreviewSize),
+			Height: float32(framePreviewSize),
+		}
+
+		// Draw preview box
+		rl.DrawRectangleRec(frameRect, rl.LightGray)
+		rl.DrawRectangleLinesEx(frameRect, 1, rl.Gray)
+
+		// Draw selected texture preview if available
+		if i < len(editor.advSelectedFrames) && editor.advSelectedFrames[i] != "" {
+			texName := editor.advSelectedFrames[i]
+			texInfo, err := m.resources.GetTexture("default", texName)
+			if err == nil {
+				// Draw texture centered in the box
+				scale := float32(framePreviewSize) / texInfo.Region.Width
+				if texInfo.Region.Height*scale > float32(framePreviewSize) {
+					scale = float32(framePreviewSize) / texInfo.Region.Height
+				}
+				drawWidth := texInfo.Region.Width * scale
+				drawHeight := texInfo.Region.Height * scale
+				drawX := frameRect.X + (frameRect.Width-drawWidth)/2
+				drawY := frameRect.Y + (frameRect.Height-drawHeight)/2
+
+				rl.DrawTexturePro(
+					texInfo.Texture,
+					texInfo.Region,
+					rl.Rectangle{X: drawX, Y: drawY, Width: drawWidth, Height: drawHeight},
+					rl.Vector2{}, 0, rl.White,
+				)
+			} else {
+				// Draw placeholder if texture is missing but selected
+				rl.DrawText("?", int32(int(frameRect.X)+framePreviewSize/2-5), int32(int(frameRect.Y)+framePreviewSize/2-10), 20, rl.Red)
+			}
+		} else {
+			// Draw placeholder for empty slot
+			rl.DrawText("+", int32(int(frameRect.X)+framePreviewSize/2-5), int32(int(frameRect.Y)+framePreviewSize/2-10), 20, rl.DarkGray)
+		}
+
+		// Handle click to select texture for this frame
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			editor.advSelectingFrameIndex = i
+			m.showResourceViewer = true // Open resource viewer to select texture
+			m.uiState.activeInput = ""  // Deactivate text inputs
+		}
+	}
+
+	saveBtnAdv := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth/2 - 40),
+		Y:      float32(dialogY + dialogHeight - 40),
+		Width:  80,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(saveBtnAdv, rl.Green)
+	rl.DrawText("Save", int32(saveBtnAdv.X+20), int32(saveBtnAdv.Y+8), 16, rl.White)
+
 	// Handle button clicks
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), backBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		m.uiState.showAdvancedEditor = false
+		m.uiState.activeInput = ""
 	}
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), exitBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		m.closeAllEditors()
+		m.uiState.activeInput = ""
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtnAdv) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Validate inputs
+		animTime, timeErr := strconv.ParseFloat(editor.advAnimationTimeStr, 64)
+		allFramesSelected := true
+		if frameCount <= 0 {
+			allFramesSelected = false
+		}
+		for i := 0; i < frameCount; i++ {
+			if i >= len(editor.advSelectedFrames) || editor.advSelectedFrames[i] == "" {
+				allFramesSelected = false
+				break
+			}
+		}
+
+		if timeErr == nil && animTime > 0 && allFramesSelected {
+			// Apply changes to the TileTexture
+			if editor.texIndex < len(editor.tile.Textures) {
+				tex := &editor.tile.Textures[editor.texIndex]
+				// Use properties from the *original* first frame if available, otherwise defaults
+				originalRotation := 0.0
+				originalScale := 1.0
+				originalOffsetX := 0.0
+				originalOffsetY := 0.0
+				originalTint := rl.White
+				if len(editor.tile.Textures[editor.texIndex].Frames) > 0 {
+					originalFrame := editor.tile.Textures[editor.texIndex].Frames[0]
+					originalRotation = originalFrame.Rotation
+					originalScale = originalFrame.Scale
+					originalOffsetX = originalFrame.OffsetX
+					originalOffsetY = originalFrame.OffsetY
+					originalTint = originalFrame.Tint
+				}
+
+				tex.IsComplex = true // Ensure IsComplex is set
+				tex.AnimationTime = animTime
+				tex.CurrentFrame = 0                                      // Reset animation state
+				tex.Frames = make([]beam.TileTextureFrame, 0, frameCount) // Clear existing frames
+
+				for i := 0; i < frameCount; i++ {
+					newFrame := beam.TileTextureFrame{
+						Name:     editor.advSelectedFrames[i],
+						Rotation: originalRotation, // Apply original/default properties
+						Scale:    originalScale,
+						OffsetX:  originalOffsetX,
+						OffsetY:  originalOffsetY,
+						Tint:     originalTint,
+					}
+					tex.Frames = append(tex.Frames, newFrame)
+				}
+
+				m.showToast("Complex texture saved!", ToastSuccess)
+				m.uiState.showAdvancedEditor = false // Close advanced editor on successful save
+				m.uiState.textureEditor = nil        // Close simple texture editor as well
+				m.uiState.activeInput = ""
+			} else {
+				m.showToast("Error: Texture index out of bounds.", ToastError)
+			}
+		} else {
+			// Show error message
+			errMsg := "Invalid input:"
+			if timeErr != nil || animTime <= 0 {
+				errMsg += " Invalid time."
+			}
+			if frameCount <= 0 {
+				errMsg += " Frame count > 0."
+			}
+			if !allFramesSelected {
+				errMsg += " Select all frames."
+			}
+			m.showToast(errMsg, ToastError)
+		}
 	}
 }
 
 func (m *MapMaker) closeTextureEditor() {
 	m.uiState.textureEditor = nil
 	m.uiState.showAdvancedEditor = false
+	m.uiState.activeInput = "" // Ensure input focus is cleared
 }
 
 func (m *MapMaker) closeAllEditors() {
-	m.closeTextureEditor()
+	m.closeTextureEditor() // This already handles clearing advanced editor state
 	m.showTileInfo = false
+	m.uiState.activeInput = "" // Ensure input focus is cleared
 }

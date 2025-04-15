@@ -1,8 +1,6 @@
 package beam
 
 import (
-	"image/color"
-
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
@@ -65,7 +63,9 @@ type TileTexture struct {
 	Frames []TileTextureFrame
 
 	// Complex textures can have multiple frames, with a transition
-	IsComplex bool
+	IsComplex     bool
+	AnimationTime float64
+	CurrentFrame  int
 }
 
 type TileTextureFrame struct {
@@ -74,7 +74,7 @@ type TileTextureFrame struct {
 	Scale    float64
 	OffsetX  float64
 	OffsetY  float64
-	Tint     color.RGBA
+	Tint     rl.Color
 }
 
 func NewSimpleTileTexture(name string) TileTexture {

@@ -232,182 +232,176 @@ func (m *MapMaker) Run() {
 	}
 }
 
+func (m *MapMaker) isUIBlocked() bool {
+	return m.showResourceViewer || (m.uiState.textureEditor != nil && m.uiState.textureEditor.visible) || m.uiState.showAdvancedEditor
+}
+
 func (m *MapMaker) update() {
 	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
 
-	m.handleResizeGrid(tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn)
-	m.handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn)
-	m.handleResourceViewer(viewResourcesBtn, loadResourceBtn)
+	// Only handle UI interactions if no modal is blocking
+	if !m.isUIBlocked() {
+		m.handleResizeGrid(tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn)
+		m.handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn)
+		m.handleResourceViewer(viewResourcesBtn, loadResourceBtn)
+		m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
 
-	// Tool button handlers
-	m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
+		// Center the grid in the window
+		maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
+		maxVisibleHeight := MaxDisplayHeight * DefaultTileSize / m.uiState.tileSize
+		displayWidth := min(m.tileGrid.Width, maxVisibleWidth)
+		displayHeight := min(m.tileGrid.Height, maxVisibleHeight)
+		totalGridWidth := displayWidth * m.uiState.tileSize
+		totalGridHeight := displayHeight * m.uiState.tileSize
 
-	// Center the grid in the window
-	maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
-	maxVisibleHeight := MaxDisplayHeight * DefaultTileSize / m.uiState.tileSize
-	displayWidth := min(m.tileGrid.Width, maxVisibleWidth)
-	displayHeight := min(m.tileGrid.Height, maxVisibleHeight)
-	totalGridWidth := displayWidth * m.uiState.tileSize
-	totalGridHeight := displayHeight * m.uiState.tileSize
+		// Calculate available workspace excluding UI elements
+		workspaceWidth := int(m.window.width)
+		workspaceHeight := int(m.window.height) - m.uiState.menuBarHeight - m.uiState.statusBarHeight
 
-	// Calculate available workspace excluding UI elements
-	workspaceWidth := int(m.window.width)
-	workspaceHeight := int(m.window.height) - m.uiState.menuBarHeight - m.uiState.statusBarHeight
-
-	// Center the grid in the available workspace
-	m.tileGrid.offset = beam.Position{
-		X: (workspaceWidth - totalGridWidth) / 2,
-		Y: (workspaceHeight-totalGridHeight)/2 + m.uiState.menuBarHeight,
-	}
-
-	// Handle tile selection - Handle the viewport offset
-	mousePos := rl.GetMousePosition()
-	gridX := int((mousePos.X-float32(m.tileGrid.offset.X))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.X
-	gridY := int((mousePos.Y-float32(m.tileGrid.offset.Y))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.Y
-
-	if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		// Check if any dialogs are open
-		// Check if click is within grid bounds and below menu bar
-		if !m.showResourceViewer &&
-			!m.showTileInfo &&
-			!m.showRecentTextures &&
-			gridX >= 0 && gridX < m.tileGrid.Width &&
-			gridY >= 0 && gridY < m.tileGrid.Height &&
-			mousePos.Y > float32(m.uiState.menuBarHeight) {
-			if m.uiState.selectedTool == "paintbucket" {
-				m.tileGrid.selectedTiles = m.floodFillSelection(gridX, gridY)
-			} else {
-				m.tileGrid.selectedTiles = beam.Positions{{X: gridX, Y: gridY}}
-			}
-			m.tileGrid.hasSelection = true
+		// Center the grid in the available workspace
+		m.tileGrid.offset = beam.Position{
+			X: (workspaceWidth - totalGridWidth) / 2,
+			Y: (workspaceHeight-totalGridHeight)/2 + m.uiState.menuBarHeight,
 		}
-	} else if rl.IsMouseButtonDown(rl.MouseLeftButton) && m.tileGrid.hasSelection {
 
-		// Allow drag selection for some tools
-		if m.uiState.selectedTool == "paintbrush" ||
-			m.uiState.selectedTool == "eraser" ||
-			m.uiState.selectedTool == "pencileraser" ||
-			m.uiState.selectedTool == "layers" ||
-			(m.uiState.selectedTool == "location" && m.uiState.locationMode == 1) {
+		// Handle tile selection - Handle the viewport offset
+		mousePos := rl.GetMousePosition()
+		gridX := int((mousePos.X-float32(m.tileGrid.offset.X))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.X
+		gridY := int((mousePos.Y-float32(m.tileGrid.offset.Y))/float32(m.uiState.tileSize)) + m.tileGrid.viewportOffset.Y
+
+		if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			// Check if click is within grid bounds and below menu bar
 			if gridX >= 0 && gridX < m.tileGrid.Width &&
 				gridY >= 0 && gridY < m.tileGrid.Height &&
 				mousePos.Y > float32(m.uiState.menuBarHeight) {
-				newPos := beam.Position{X: gridX, Y: gridY}
-				alreadySelected := slices.Contains(m.tileGrid.selectedTiles, newPos)
-				if !alreadySelected {
-					m.tileGrid.selectedTiles = append(m.tileGrid.selectedTiles, newPos)
+				if m.uiState.selectedTool == "paintbucket" {
+					m.tileGrid.selectedTiles = m.floodFillSelection(gridX, gridY)
+				} else {
+					m.tileGrid.selectedTiles = beam.Positions{{X: gridX, Y: gridY}}
+				}
+				m.tileGrid.hasSelection = true
+			}
+		} else if rl.IsMouseButtonDown(rl.MouseLeftButton) && m.tileGrid.hasSelection {
+
+			// Allow drag selection for some tools
+			if m.uiState.selectedTool == "paintbrush" ||
+				m.uiState.selectedTool == "eraser" ||
+				m.uiState.selectedTool == "pencileraser" ||
+				m.uiState.selectedTool == "layers" ||
+				(m.uiState.selectedTool == "location" && m.uiState.locationMode == 1) {
+				if gridX >= 0 && gridX < m.tileGrid.Width &&
+					gridY >= 0 && gridY < m.tileGrid.Height &&
+					mousePos.Y > float32(m.uiState.menuBarHeight) {
+					newPos := beam.Position{X: gridX, Y: gridY}
+					alreadySelected := slices.Contains(m.tileGrid.selectedTiles, newPos)
+					if !alreadySelected {
+						m.tileGrid.selectedTiles = append(m.tileGrid.selectedTiles, newPos)
+					}
 				}
 			}
 		}
-	}
 
-	if m.tileGrid.hasSelection {
-		mousePos := rl.GetMousePosition()
+		if m.tileGrid.hasSelection {
+			mousePos := rl.GetMousePosition()
 
-		// Check if we're clicking within the tile info popup
-		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && m.showTileInfo {
-			dialogWidth := 350
-			closeBtn := rl.Rectangle{
-				X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
-				Y:      float32(m.uiState.tileInfoPopupY + 5),
-				Width:  25,
-				Height: 25,
+			// Check if we're clicking within the tile info popup (Tile info doesn't block)
+			if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && m.showTileInfo {
+				dialogWidth := 350
+				closeBtn := rl.Rectangle{
+					X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),
+					Y:      float32(m.uiState.tileInfoPopupY + 5),
+					Width:  25,
+					Height: 25,
+				}
+				if rl.CheckCollisionPointRec(mousePos, closeBtn) {
+					m.showTileInfo = false
+				}
 			}
-			if rl.CheckCollisionPointRec(mousePos, closeBtn) {
-				m.showTileInfo = false
-				return
-			}
-			dragArea := rl.Rectangle{
-				X:      float32(m.uiState.tileInfoPopupX),
-				Y:      float32(m.uiState.tileInfoPopupY),
-				Width:  float32(dialogWidth),
-				Height: 30,
-			}
-			if rl.CheckCollisionPointRec(mousePos, dragArea) {
-				return
-			}
-		}
 
-		if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-			switch m.uiState.selectedTool {
-			case "paintbrush", "paintbucket":
-				if m.uiState.activeTexture != nil {
+			// Handle right-click actions on selected tiles
+			if rl.IsMouseButtonPressed(rl.MouseButtonRight) {
+				switch m.uiState.selectedTool {
+				case "paintbrush", "paintbucket":
+					if m.uiState.activeTexture != nil {
+						for _, pos := range m.tileGrid.selectedTiles {
+							selectedX := int(pos.X)
+							selectedY := int(pos.Y)
+							m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
+							m.tileGrid.Tiles[selectedY][selectedX].Textures = append(
+								m.tileGrid.Tiles[selectedY][selectedX].Textures,
+								beam.NewSimpleTileTexture(m.uiState.activeTexture.Name),
+							)
+						}
+					}
+				case "eraser":
 					for _, pos := range m.tileGrid.selectedTiles {
 						selectedX := int(pos.X)
 						selectedY := int(pos.Y)
 						m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
-						m.tileGrid.Tiles[selectedY][selectedX].Textures = append(
-							m.tileGrid.Tiles[selectedY][selectedX].Textures,
-							beam.NewSimpleTileTexture(m.uiState.activeTexture.Name),
-						)
+						m.tileGrid.Tiles[selectedY][selectedX].Textures = nil
 					}
-				}
-			case "eraser":
-				for _, pos := range m.tileGrid.selectedTiles {
-					selectedX := int(pos.X)
-					selectedY := int(pos.Y)
-					m.tileGrid.Tiles[selectedY][selectedX].Type = beam.FloorTile
-					m.tileGrid.Tiles[selectedY][selectedX].Textures = nil
-				}
-			case "pencileraser":
-				for _, pos := range m.tileGrid.selectedTiles {
-					selectedX := int(pos.X)
-					selectedY := int(pos.Y)
-					tile := &m.tileGrid.Tiles[selectedY][selectedX]
-					if len(tile.Textures) > 0 {
-						lastTexture := &tile.Textures[len(tile.Textures)-1]
-						if lastTexture.IsComplex && len(lastTexture.Frames) > 0 {
-							lastTexture.Frames = lastTexture.Frames[:len(lastTexture.Frames)-1]
-							if len(lastTexture.Frames) == 0 {
+				case "pencileraser":
+					for _, pos := range m.tileGrid.selectedTiles {
+						selectedX := int(pos.X)
+						selectedY := int(pos.Y)
+						tile := &m.tileGrid.Tiles[selectedY][selectedX]
+						if len(tile.Textures) > 0 {
+							lastTexture := &tile.Textures[len(tile.Textures)-1]
+							if lastTexture.IsComplex && len(lastTexture.Frames) > 0 {
+								lastTexture.Frames = lastTexture.Frames[:len(lastTexture.Frames)-1]
+								if len(lastTexture.Frames) == 0 {
+									tile.Textures = tile.Textures[:len(tile.Textures)-1]
+								}
+							} else {
 								tile.Textures = tile.Textures[:len(tile.Textures)-1]
 							}
-						} else {
-							tile.Textures = tile.Textures[:len(tile.Textures)-1]
 						}
 					}
-				}
-			case "select":
-				if !m.showTileInfo {
-					pos := m.tileGrid.selectedTiles[0]
-					mousePos := rl.GetMousePosition()
-					m.uiState.tileInfoPopupX = int32(mousePos.X)
-					m.uiState.tileInfoPopupY = int32(mousePos.Y)
-					m.showTileInfo = true
-					m.uiState.tileInfoPos = pos
-				}
-			case "layers":
-				for _, pos := range m.tileGrid.selectedTiles {
-					selectedX := int(pos.X)
-					selectedY := int(pos.Y)
-					tileType := beam.FloorTile
-					if m.uiState.hasSwappedLayers {
-						tileType = beam.WallTile
+				case "select":
+					if !m.showTileInfo {
+						// Only show if not already open
+						pos := m.tileGrid.selectedTiles[0]
+						mousePos := rl.GetMousePosition()
+						m.uiState.tileInfoPopupX = int32(mousePos.X)
+						m.uiState.tileInfoPopupY = int32(mousePos.Y)
+						m.showTileInfo = true
+						m.uiState.tileInfoPos = pos
 					}
-					m.tileGrid.Tiles[selectedY][selectedX].Type = tileType
-				}
-				break
-			case "location":
-				// Reset the list if were about to add new positions
-				if m.uiState.locationMode == 1 {
-					m.tileGrid.DungeonEntry = beam.Positions{}
-				}
+				case "layers":
+					for _, pos := range m.tileGrid.selectedTiles {
+						selectedX := int(pos.X)
+						selectedY := int(pos.Y)
+						tileType := beam.FloorTile
+						if m.uiState.hasSwappedLayers {
+							tileType = beam.WallTile
+						}
+						m.tileGrid.Tiles[selectedY][selectedX].Type = tileType
+					}
+					break
+				case "location":
+					// Reset the list if were about to add new positions
+					if m.uiState.locationMode == 1 {
+						m.tileGrid.DungeonEntry = beam.Positions{}
+					}
 
-				for _, tile := range m.tileGrid.selectedTiles {
-					switch m.uiState.locationMode {
-					case 0:
-						m.tileGrid.Start = tile
-					case 1:
-						m.tileGrid.DungeonEntry = append(m.tileGrid.DungeonEntry, tile)
-					case 2:
-						m.tileGrid.Respawn = tile
-					case 3:
-						m.tileGrid.Exit = tile
+					for _, tile := range m.tileGrid.selectedTiles {
+						switch m.uiState.locationMode {
+						case 0:
+							m.tileGrid.Start = tile
+						case 1:
+							m.tileGrid.DungeonEntry = append(m.tileGrid.DungeonEntry, tile)
+						case 2:
+							m.tileGrid.Respawn = tile
+						case 3:
+							m.tileGrid.Exit = tile
+						}
 					}
+					break
 				}
-				break
 			}
 		}
-	}
+	} // end if !m.isUIBlocked()
+
 }
 
 // handleMapTools handles the selecting and swapping of tools
@@ -821,16 +815,31 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 
 // handleTextureSelect handles the selection of a texture from the resource viewer
 func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
+	// Check if selection is for the advanced texture editor frame
+	if m.uiState.textureEditor != nil && m.uiState.textureEditor.advSelectingFrameIndex != -1 {
+		editor := m.uiState.textureEditor
+		frameIndex := editor.advSelectingFrameIndex
+		if frameIndex >= 0 && frameIndex < len(editor.advSelectedFrames) {
+			editor.advSelectedFrames[frameIndex] = texInfo.Name
+		}
+		editor.advSelectingFrameIndex = -1 // Reset selection index
+		m.showResourceViewer = false       // Close viewer after selection
+		return                             // Don't update the main active texture
+	}
+
+	// --- Original logic for main active texture ---
 	m.uiState.activeTexture = texInfo
 
 	// Add to recent textures if not already present
 	for i, name := range m.uiState.recentTextures {
 		if name == texInfo.Name {
+			// Move to front
 			m.uiState.recentTextures = append(m.uiState.recentTextures[:i], m.uiState.recentTextures[i+1:]...)
 			m.uiState.recentTextures = append([]string{texInfo.Name}, m.uiState.recentTextures...)
 			return
 		}
 	}
+	// Add to front
 	m.uiState.recentTextures = append([]string{texInfo.Name}, m.uiState.recentTextures...)
 
 	// Keep only last 8 textures

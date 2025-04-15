@@ -1,8 +1,9 @@
 # TODO
 
 - i need 'complex' textures. via tile select menu
-  - Scale textures larger. so i place them in one tile but they can be larger than the tile.
   - i need alternating textures. so i can place them in a grid and they alternate. kind of an animation.
+
+- add show highlight/tilegrid toggles
 
 - item tiles. that way we can keep the textures, tiles, and items separate.
 
