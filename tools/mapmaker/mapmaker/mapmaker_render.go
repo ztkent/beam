@@ -373,6 +373,7 @@ func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, select
 		"eraser":       eraseBtn,
 		"pencileraser": eraseBtn,
 		"select":       selectBtn,
+		"selectall":    selectBtn,
 		"layers":       layersBtn,
 		"location":     locationBtn,
 	}

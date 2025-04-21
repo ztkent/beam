@@ -66,6 +66,9 @@ type UIState struct {
 	// Location Tool Mode
 	locationMode int
 
+	// Select Tool Swap
+	hasSwappedSelect bool
+
 	// Grid Width/Height Controls
 	gridWidth  int
 	gridHeight int
@@ -181,6 +184,7 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["eraser"] = rl.LoadTexture("../assets/eraser.png")
 	m.uiState.uiTextures["pencileraser"] = rl.LoadTexture("../assets/pencileraser.png")
 	m.uiState.uiTextures["select"] = rl.LoadTexture("../assets/select.png")
+	m.uiState.uiTextures["selectall"] = rl.LoadTexture("../assets/grab.png")
 	m.uiState.uiTextures["layerwall"] = rl.LoadTexture("../assets/wall.png")
 	m.uiState.uiTextures["layerground"] = rl.LoadTexture("../assets/soil.png")
 	m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
@@ -274,7 +278,7 @@ func (m *MapMaker) update() {
 			if gridX >= 0 && gridX < m.tileGrid.Width &&
 				gridY >= 0 && gridY < m.tileGrid.Height &&
 				mousePos.Y > float32(m.uiState.menuBarHeight) {
-				if m.uiState.selectedTool == "paintbucket" {
+				if m.uiState.selectedTool == "paintbucket" || m.uiState.selectedTool == "selectall" {
 					m.tileGrid.selectedTiles = m.floodFillSelection(gridX, gridY)
 				} else {
 					m.tileGrid.selectedTiles = beam.Positions{{X: gridX, Y: gridY}}
@@ -367,6 +371,8 @@ func (m *MapMaker) update() {
 						m.showTileInfo = true
 						m.uiState.tileInfoPos = pos
 					}
+				case "selectall":
+					// TODO: Implement select all
 				case "layers":
 					for _, pos := range m.tileGrid.selectedTiles {
 						selectedX := int(pos.X)
@@ -435,13 +441,17 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 		}
 	}
 	if m.isIconButtonClicked(selectBtn) {
-		if m.uiState.selectedTool == "select" {
+		if m.uiState.selectedTool == "select" || m.uiState.selectedTool == "selectall" {
 			m.uiState.selectedTool = ""
 		} else {
-			m.uiState.selectedTool = "select"
+			name := "select"
+			if m.uiState.hasSwappedSelect {
+				name = "selectall"
+			}
+			m.uiState.selectedTool = name
 			m.tileGrid.hasSelection = false
 			m.tileGrid.selectedTiles = beam.Positions{}
-			m.showToast("Select tool selected", ToastInfo)
+			m.showToast(name+" tool selected", ToastInfo)
 		}
 	}
 	if m.isIconButtonClicked(layersBtn) {
@@ -485,6 +495,18 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 				} else {
 					m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
 				}
+			}
+
+			// Handle select swap
+			if m.uiState.selectedTool == "select" || m.uiState.selectedTool == "selectall" {
+				m.uiState.uiTextures["select"], m.uiState.uiTextures["selectall"] =
+					m.uiState.uiTextures["selectall"], m.uiState.uiTextures["select"]
+				if m.uiState.selectedTool == "select" {
+					m.uiState.selectedTool = "selectall"
+				} else {
+					m.uiState.selectedTool = "select"
+				}
+				m.uiState.hasSwappedSelect = !m.uiState.hasSwappedSelect
 			}
 
 			// Handle location swap
@@ -762,6 +784,11 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["paintbucket"].Width), Height: float32(m.uiState.uiTextures["paintbucket"].Height)},
 		"Paintbucket",
 	)
+
+	eraseText := "Eraser"
+	if m.uiState.hasSwappedEraser {
+		eraseText = "Pencil Eraser"
+	}
 	eraseBtn = m.NewIconButton(
 		270,
 		15,
@@ -769,8 +796,13 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		30,
 		m.uiState.uiTextures["eraser"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["eraser"].Width), Height: float32(m.uiState.uiTextures["eraser"].Height)},
-		"Erase",
+		eraseText,
 	)
+
+	selectText := "Select"
+	if m.uiState.hasSwappedSelect {
+		selectText = "Select All"
+	}
 	selectBtn = m.NewIconButton(
 		320,
 		15,
@@ -778,9 +810,13 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		30,
 		m.uiState.uiTextures["select"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["select"].Width), Height: float32(m.uiState.uiTextures["select"].Height)},
-		"Select",
+		selectText,
 	)
 
+	layersText := "Ground"
+	if m.uiState.hasSwappedLayers {
+		layersText = "Wall"
+	}
 	layersBtn = m.NewIconButton(
 		370,
 		15,
@@ -788,7 +824,7 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		30,
 		m.uiState.uiTextures["layers"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["layers"].Width), Height: float32(m.uiState.uiTextures["layers"].Height)},
-		"Layers",
+		layersText,
 	)
 
 	locationTooltip := "Player Start"
