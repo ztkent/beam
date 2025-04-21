@@ -33,8 +33,6 @@ const (
 	WallTile TileType = iota
 	FloorTile
 	EnemyTile
-	DungeonEntrance
-	DungeonExit
 	WeaponTile
 	ChestTile
 )
