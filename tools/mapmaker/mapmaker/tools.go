@@ -119,8 +119,9 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 		}
 
 		targetTile := m.tileGrid.Tiles[y][x]
-
 		if len(targetTile.Textures) != len(sourceTile.Textures) {
+			return false
+		} else if targetTile.Type != sourceTile.Type {
 			return false
 		}
 
