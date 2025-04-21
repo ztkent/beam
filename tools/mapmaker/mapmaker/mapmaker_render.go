@@ -843,12 +843,16 @@ func (m *MapMaker) renderTileInfoPopup() {
 	textY := m.uiState.tileInfoPopupY + padding
 
 	// Draw tile type
-	tile := m.tileGrid.Tiles[pos.Y][pos.X]
+	tile := m.tileGrid.Tiles[m.uiState.tileInfoPos[0].Y][m.uiState.tileInfoPos[0].X]
 	rl.DrawText(fmt.Sprintf("Tile Type: %d", tile.Type), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 25
 
-	// Draw tile position
-	rl.DrawText(fmt.Sprintf("Position: (%d, %d)", tile.Pos.X, tile.Pos.Y), m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
+	// Draw tile position - show "many" if multiple tiles selected
+	posText := "Position: many"
+	if len(m.uiState.tileInfoPos) == 1 {
+		posText = fmt.Sprintf("Position: (%d, %d)", tile.Pos.X, tile.Pos.Y)
+	}
+	rl.DrawText(posText, m.uiState.tileInfoPopupX+padding, textY, 16, rl.Black)
 	textY += 25
 
 	// Draw textures
@@ -877,7 +881,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 			// Initialize base editor state
 			editor := &TextureEditorState{
 				visible:       true,
-				tile:          &m.tileGrid.Tiles[pos.Y][pos.X],
+				tile:          &m.tileGrid.Tiles[m.uiState.tileInfoPos[0].Y][m.uiState.tileInfoPos[0].X],
 				texIndex:      texIndex,
 				frameIndex:    0,
 				clearedInputs: make(map[string]bool),
@@ -927,7 +931,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 			warningText := ""
 			textColor := rl.DarkGray
 
-			if m.tileGrid.missingResourceTiles.Contains(pos, frame.Name) {
+			if m.tileGrid.missingResourceTiles.Contains(pos[0], frame.Name) {
 				warningText = " !"
 				textColor = rl.Yellow
 			}
@@ -1162,21 +1166,21 @@ func (m *MapMaker) renderTextureEditor() {
 	}
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		// Update the texture frame with new values
-		// Ensure the frame exists before trying to access it
-		if editor.texIndex < len(editor.tile.Textures) && editor.frameIndex < len(editor.tile.Textures[editor.texIndex].Frames) {
-			frame := &editor.tile.Textures[editor.texIndex].Frames[editor.frameIndex]
-			frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
-			frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
-			frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
-			frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
-			r, _ := strconv.Atoi(editor.tintR)
-			g, _ := strconv.Atoi(editor.tintG)
-			b, _ := strconv.Atoi(editor.tintB)
-			a, _ := strconv.Atoi(editor.tintA)
-			frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
-		} else {
-			fmt.Println("Error: Texture or frame index out of bounds during save.")
+		// Update all selected tiles with new values
+		for _, pos := range m.uiState.tileInfoPos {
+			tile := &m.tileGrid.Tiles[pos.Y][pos.X]
+			if editor.texIndex < len(tile.Textures) && editor.frameIndex < len(tile.Textures[editor.texIndex].Frames) {
+				frame := &tile.Textures[editor.texIndex].Frames[editor.frameIndex]
+				frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
+				frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
+				frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
+				frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
+				r, _ := strconv.Atoi(editor.tintR)
+				g, _ := strconv.Atoi(editor.tintG)
+				b, _ := strconv.Atoi(editor.tintB)
+				a, _ := strconv.Atoi(editor.tintA)
+				frame.Tint = rl.Color{R: uint8(r), G: uint8(g), B: uint8(b), A: uint8(a)}
+			}
 		}
 		m.closeTextureEditor()
 	}
@@ -1458,48 +1462,49 @@ func (m *MapMaker) renderAdvancedEditor() {
 		}
 
 		if (frameCount == 1 || (timeErr == nil && animTime > 0)) && allFramesSelected {
-			// Apply changes to the TileTexture
-			if editor.texIndex < len(editor.tile.Textures) {
-				tex := editor.tile.Textures[editor.texIndex]
-				// Use properties from the *original* first frame if available, otherwise defaults
-				originalRotation := 0.0
-				originalScale := 1.0
-				originalOffsetX := 0.0
-				originalOffsetY := 0.0
-				originalTint := rl.White
-				if len(editor.tile.Textures[editor.texIndex].Frames) > 0 {
-					originalFrame := editor.tile.Textures[editor.texIndex].Frames[0]
-					originalRotation = originalFrame.Rotation
-					originalScale = originalFrame.Scale
-					originalOffsetX = originalFrame.OffsetX
-					originalOffsetY = originalFrame.OffsetY
-					originalTint = originalFrame.Tint
-				}
-
-				tex.IsComplex = frameCount > 1
-				tex.AnimationTime = animTime                              // Will be 0 if frameCount is 1
-				tex.CurrentFrame = 0                                      // Reset animation state
-				tex.Frames = make([]beam.TileTextureFrame, 0, frameCount) // Clear existing frames
-
-				for i := 0; i < frameCount; i++ {
-					newFrame := beam.TileTextureFrame{
-						Name:     editor.advSelectedFrames[i],
-						Rotation: originalRotation, // Apply original/default properties
-						Scale:    originalScale,
-						OffsetX:  originalOffsetX,
-						OffsetY:  originalOffsetY,
-						Tint:     originalTint,
+			// Apply changes to all selected tiles
+			for _, pos := range m.uiState.tileInfoPos {
+				tile := &m.tileGrid.Tiles[pos.Y][pos.X]
+				if editor.texIndex < len(tile.Textures) {
+					tex := tile.Textures[editor.texIndex]
+					// Use properties from the *original* first frame if available, otherwise defaults
+					originalRotation := 0.0
+					originalScale := 1.0
+					originalOffsetX := 0.0
+					originalOffsetY := 0.0
+					originalTint := rl.White
+					if len(tile.Textures[editor.texIndex].Frames) > 0 {
+						originalFrame := tile.Textures[editor.texIndex].Frames[0]
+						originalRotation = originalFrame.Rotation
+						originalScale = originalFrame.Scale
+						originalOffsetX = originalFrame.OffsetX
+						originalOffsetY = originalFrame.OffsetY
+						originalTint = originalFrame.Tint
 					}
-					tex.Frames = append(tex.Frames, newFrame)
-				}
 
-				m.showToast("Texture properties saved!", ToastSuccess)
-				m.uiState.showAdvancedEditor = false // Close advanced editor on successful save
-				m.uiState.textureEditor = nil        // Close simple texture editor as well
-				m.uiState.activeInput = ""
-			} else {
-				m.showToast("Error: Texture index out of bounds.", ToastError)
+					tex.IsComplex = frameCount > 1
+					tex.AnimationTime = animTime
+					tex.CurrentFrame = 0
+					tex.Frames = make([]beam.TileTextureFrame, 0, frameCount)
+
+					for i := 0; i < frameCount; i++ {
+						newFrame := beam.TileTextureFrame{
+							Name:     editor.advSelectedFrames[i],
+							Rotation: originalRotation,
+							Scale:    originalScale,
+							OffsetX:  originalOffsetX,
+							OffsetY:  originalOffsetY,
+							Tint:     originalTint,
+						}
+						tex.Frames = append(tex.Frames, newFrame)
+					}
+				}
 			}
+
+			m.showToast("Texture properties saved!", ToastSuccess)
+			m.uiState.showAdvancedEditor = false
+			m.uiState.textureEditor = nil
+			m.uiState.activeInput = ""
 		} else {
 			// Show error message
 			errMsg := "Invalid input:"

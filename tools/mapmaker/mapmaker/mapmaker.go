@@ -43,7 +43,7 @@ type UIState struct {
 	resourceViewerScroll int
 
 	// Tile Info Popup
-	tileInfoPos     beam.Position
+	tileInfoPos     []beam.Position
 	tileInfoPopupX  int32
 	tileInfoPopupY  int32
 	isDraggingPopup bool
@@ -369,10 +369,17 @@ func (m *MapMaker) update() {
 						m.uiState.tileInfoPopupX = int32(mousePos.X)
 						m.uiState.tileInfoPopupY = int32(mousePos.Y)
 						m.showTileInfo = true
-						m.uiState.tileInfoPos = pos
+						m.uiState.tileInfoPos = []beam.Position{pos}
 					}
 				case "selectall":
-					// TODO: Implement select all
+					if !m.showTileInfo {
+						pos := m.tileGrid.selectedTiles
+						mousePos := rl.GetMousePosition()
+						m.uiState.tileInfoPopupX = int32(mousePos.X)
+						m.uiState.tileInfoPopupY = int32(mousePos.Y)
+						m.showTileInfo = true
+						m.uiState.tileInfoPos = pos
+					}
 				case "layers":
 					for _, pos := range m.tileGrid.selectedTiles {
 						selectedX := int(pos.X)
