@@ -1,8 +1,5 @@
 # TODO
 
-- i need 'complex' textures. via tile select menu
-  - ALMOST DONE - now i just need way to modify many textures in bulk.
-
 - add show highlight/tilegrid toggles
 
 - item tiles. that way we can keep the textures, tiles, and items separate.
