@@ -1,6 +1,0 @@
-# TODO
-
-- fix margin issue.
-  - We need edge margin (top, bottom, left, right)
-  - We need internal margin (between sprites)
-  - crops_all.png is the test

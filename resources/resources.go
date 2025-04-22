@@ -149,17 +149,13 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 			if gridSize == 0 {
 				gridSize = DefaultGridSize
 			}
-			margin := def.SheetMargin
-			if margin == 0 {
-				margin = DefaultMargin
-			}
 
 			spriteSheet := &SpriteSheet{
 				Name:     def.Name,
 				Path:     def.Path,
 				Sprites:  make(map[string]Rectangle),
 				GridSize: gridSize,
-				Margin:   margin,
+				Margin:   def.SheetMargin,
 				Loaded:   false,
 			}
 
@@ -167,23 +163,15 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 			if len(def.SheetData) == 0 {
 				tempTexture := rl.LoadTexture(def.Path)
 				fileName := strings.TrimSuffix(filepath.Base(def.Path), filepath.Ext(def.Path))
-				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSize, margin)
+				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSize, def.SheetMargin)
 				rl.UnloadTexture(tempTexture)
 			}
 
 			// Initialize sprite regions
 			for spriteName, pos := range def.SheetData {
-				rowMargin := int32(0)
-				colMargin := int32(0)
-				if pos[0] > 0 {
-					colMargin = 1
-				}
-				if pos[1] > 0 {
-					rowMargin = 1
-				}
 				spriteSheet.Sprites[spriteName] = Rectangle{
-					X:      pos[0] * (gridSize + margin - colMargin),
-					Y:      pos[1] * (gridSize + margin - rowMargin),
+					X:      pos[0] * (gridSize + def.SheetMargin),
+					Y:      pos[1] * (gridSize + def.SheetMargin),
 					Width:  gridSize,
 					Height: gridSize,
 				}
@@ -484,31 +472,26 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 				if gridSize == 0 {
 					gridSize = DefaultGridSize
 				}
-				margin := resource.SheetMargin
-				if margin == 0 {
-					margin = DefaultMargin
-				}
-
 				spriteSheet := &SpriteSheet{
 					Name:     resource.Name,
 					Path:     resource.Path,
 					Sprites:  make(map[string]Rectangle),
 					GridSize: gridSize,
-					Margin:   margin,
+					Margin:   resource.SheetMargin,
 					Loaded:   false,
 				}
 
 				if len(resource.SheetData) == 0 {
 					tempTexture := rl.LoadTexture(resource.Path)
 					fileName := strings.TrimSuffix(filepath.Base(resource.Path), filepath.Ext(resource.Path))
-					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSize, margin)
+					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSize, resource.SheetMargin)
 					rl.UnloadTexture(tempTexture)
 				}
 
 				for spriteName, pos := range resource.SheetData {
 					spriteSheet.Sprites[spriteName] = Rectangle{
-						X:      pos[0] * (gridSize + margin),
-						Y:      pos[1] * (gridSize + margin),
+						X:      pos[0] * (gridSize + resource.SheetMargin),
+						Y:      pos[1] * (gridSize + resource.SheetMargin),
 						Width:  gridSize,
 						Height: gridSize,
 					}
