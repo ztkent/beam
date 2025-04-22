@@ -80,17 +80,18 @@ type UIState struct {
 }
 
 type TileGrid struct {
-	offset               beam.Position // The offset of the grid in the window
-	hasSelection         bool
+	offset               beam.Position    // The offset of the grid in the window
+	hasSelection         bool             // If the user has any selected tiles
 	selectedTiles        beam.Positions   // These are the tiles that are selected by the user
 	missingResourceTiles MissingResources // This is every tile that has a texture, that is missing in the resource manager
 
-	// This is the actual map we will use in game with beam.
-	beam.Map
-
+	// The section of the grid that is currently visible
 	viewportOffset beam.Position // Tracks how many tiles to offset the view
 	viewportWidth  int           // Width of visible viewport in tiles
 	viewportHeight int           // Height of visible viewport in tiles
+
+	// This is the actual map we will use in game with beam.
+	beam.Map
 }
 
 type MissingResources []MissingResource
@@ -413,8 +414,7 @@ func (m *MapMaker) update() {
 				}
 			}
 		}
-	} // end if !m.isUIBlocked()
-
+	}
 }
 
 // handleMapTools handles the selecting and swapping of tools
@@ -518,7 +518,7 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 
 			// Handle location swap
 			if m.uiState.selectedTool == "location" {
-				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4 // Cycle through 4 states
+				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4
 				modeNames := []string{"Player Start", "Dungeon Entrance", "Respawn", "Exit"}
 				m.showToast(fmt.Sprintf("Location Mode: %s", modeNames[m.uiState.locationMode]), ToastInfo)
 			}
@@ -867,13 +867,11 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 		}
 		editor.advSelectingFrameIndex = -1 // Reset selection index
 		m.showResourceViewer = false       // Close viewer after selection
-		return                             // Don't update the main active texture
+		return
 	}
 
-	// --- Original logic for main active texture ---
-	m.uiState.activeTexture = texInfo
-
 	// Add to recent textures if not already present
+	m.uiState.activeTexture = texInfo
 	for i, name := range m.uiState.recentTextures {
 		if name == texInfo.Name {
 			// Move to front

@@ -1444,9 +1444,9 @@ func (m *MapMaker) renderAdvancedEditor() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtnAdv) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Validate inputs
-		animTime := 0.0 // Default value
+		animTime := 0.0
 		var timeErr error
-		if frameCount > 0 { // Only parse animTime if frameCount is greater than 0
+		if frameCount > 0 {
 			animTime, timeErr = strconv.ParseFloat(editor.advAnimationTimeStr, 64)
 		}
 
