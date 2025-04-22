@@ -173,9 +173,17 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 
 			// Initialize sprite regions
 			for spriteName, pos := range def.SheetData {
+				rowMargin := int32(0)
+				colMargin := int32(0)
+				if pos[0] > 0 {
+					colMargin = 1
+				}
+				if pos[1] > 0 {
+					rowMargin = 1
+				}
 				spriteSheet.Sprites[spriteName] = Rectangle{
-					X:      pos[0] * (gridSize + margin),
-					Y:      pos[1] * (gridSize + margin),
+					X:      pos[0] * (gridSize + margin - colMargin),
+					Y:      pos[1] * (gridSize + margin - rowMargin),
 					Width:  gridSize,
 					Height: gridSize,
 				}
