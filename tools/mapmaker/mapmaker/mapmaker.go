@@ -190,6 +190,7 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["layerground"] = rl.LoadTexture("../assets/soil.png")
 	m.uiState.uiTextures["layers"] = m.uiState.uiTextures["layerground"]
 	m.uiState.uiTextures["location"] = rl.LoadTexture("../assets/location.png")
+	m.uiState.uiTextures["gridlines"] = rl.LoadTexture("../assets/gridlines.png")
 
 	// Add directional arrows for viewport
 	m.uiState.uiTextures["up"] = rl.LoadTexture("../assets/up.png")
@@ -242,14 +243,14 @@ func (m *MapMaker) isUIBlocked() bool {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn := m.getUIButtons()
 
 	// Only handle UI interactions if no modal is blocking
 	if !m.isUIBlocked() {
 		m.handleResizeGrid(tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn)
 		m.handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn)
 		m.handleResourceViewer(viewResourcesBtn, loadResourceBtn)
-		m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn)
+		m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn)
 
 		// Center the grid in the window
 		maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
@@ -287,7 +288,6 @@ func (m *MapMaker) update() {
 				m.tileGrid.hasSelection = true
 			}
 		} else if rl.IsMouseButtonDown(rl.MouseLeftButton) && m.tileGrid.hasSelection {
-
 			// Allow drag selection for some tools
 			if m.uiState.selectedTool == "paintbrush" ||
 				m.uiState.selectedTool == "eraser" ||
@@ -418,7 +418,7 @@ func (m *MapMaker) update() {
 }
 
 // handleMapTools handles the selecting and swapping of tools
-func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconButton, eraseBtn IconButton, selectBtn IconButton, layersBtn IconButton, locationBtn IconButton) {
+func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconButton, eraseBtn IconButton, selectBtn IconButton, layersBtn IconButton, locationBtn IconButton, gridlinesBtn IconButton) {
 	if m.isIconButtonClicked(paintbrushBtn) {
 		if m.uiState.selectedTool == "paintbrush" {
 			m.uiState.selectedTool = ""
@@ -475,6 +475,14 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 		} else {
 			m.uiState.selectedTool = "location"
 			m.showToast("Location tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(gridlinesBtn) {
+		if m.uiState.selectedTool == "gridlines" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "gridlines"
+			m.showToast("Gridlines tool selected", ToastInfo)
 		}
 	}
 
@@ -715,7 +723,7 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn IconButton) {
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn IconButton) {
 	widthSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	widthLargerBtn = m.NewButton(85, 8, 30, 20, "+")
 	heightSmallerBtn = m.NewButton(10, 33, 30, 20, "-")
@@ -851,6 +859,16 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		m.uiState.uiTextures["location"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["location"].Width), Height: float32(m.uiState.uiTextures["location"].Height)},
 		locationTooltip,
+	)
+
+	gridlinesBtn = m.NewIconButton(
+		470,
+		15,
+		40,
+		30,
+		m.uiState.uiTextures["gridlines"],
+		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["gridlines"].Width), Height: float32(m.uiState.uiTextures["gridlines"].Height)},
+		"Hide Gridlines",
 	)
 
 	return
