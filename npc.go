@@ -38,3 +38,7 @@ type NPCData struct {
 	DyingFrames         int
 	Dead                bool
 }
+
+func (npc *NPC) UpdateDirection(dir Direction) {
+	npc.Data.Direction = dir
+}
