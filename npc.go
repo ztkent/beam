@@ -11,7 +11,8 @@ type NPC struct {
 }
 
 type NPCData struct {
-	Name string
+	Name    string
+	Texture *TileTexture
 
 	Health           int
 	MaxHealth        int
