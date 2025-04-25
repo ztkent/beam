@@ -13,7 +13,6 @@ func (tile TileType) ToInt() int {
 const (
 	WallTile TileType = iota
 	FloorTile
-	EnemyTile
 	WeaponTile
 	ChestTile
 )
