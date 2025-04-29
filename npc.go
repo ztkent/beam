@@ -9,6 +9,13 @@ import (
 	beam_math "github.com/ztkent/beam/math"
 )
 
+type NPCTexture struct {
+	Up    *AnimatedTexture
+	Down  *AnimatedTexture
+	Left  *AnimatedTexture
+	Right *AnimatedTexture
+}
+
 type NPC struct {
 	Pos            Position
 	LastMoveTime   float32
@@ -19,7 +26,7 @@ type NPC struct {
 
 type NPCData struct {
 	Name    string
-	Texture *TileTexture
+	Texture *NPCTexture
 
 	Health           int
 	MaxHealth        int
@@ -45,6 +52,23 @@ type NPCData struct {
 	DamageFrames        int
 	DyingFrames         int
 	Dead                bool
+}
+
+func NewSimpleNPCTexture(name string) *NPCTexture {
+	return &NPCTexture{
+		Up: &AnimatedTexture{
+			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+		},
+		Down: &AnimatedTexture{
+			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+		},
+		Left: &AnimatedTexture{
+			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+		},
+		Right: &AnimatedTexture{
+			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+		},
+	}
 }
 
 // Move the NPC towards the player if within aggro range
@@ -171,4 +195,19 @@ func (npc *NPC) Attack(playerPos Position) bool {
 		}
 	}
 	return false
+}
+
+func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
+	switch npc.Data.Direction {
+	case DirUp:
+		return npc.Data.Texture.Up
+	case DirDown:
+		return npc.Data.Texture.Down
+	case DirLeft:
+		return npc.Data.Texture.Left
+	case DirRight:
+		return npc.Data.Texture.Right
+	default:
+		return nil
+	}
 }

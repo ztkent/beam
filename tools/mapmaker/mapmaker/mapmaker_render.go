@@ -208,7 +208,7 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 		}
 
 		// If the texture isn't complex, we can just draw the frames on top of each other.
-		if !tex.IsComplex {
+		if !tex.IsAnimated {
 			for _, frame := range tex.Frames {
 				if frame.Name == "" {
 					continue
@@ -348,6 +348,11 @@ func (m *MapMaker) renderUI() {
 
 	if m.showResourceViewer {
 		m.renderResourceViewer()
+	}
+
+	// Render NPC editor if active
+	if m.uiState.npcEditor != nil && m.uiState.npcEditor.visible {
+		m.renderNPCEditor()
 	}
 
 	// Draw status bar
@@ -865,7 +870,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 
 	for texIndex, tex := range tile.Textures {
 		// Draw complex text and edit button side by side
-		complexText := fmt.Sprintf("- Complex: %t", tex.IsComplex)
+		complexText := fmt.Sprintf("- Complex: %t", tex.IsAnimated)
 		rl.DrawText(complexText, m.uiState.tileInfoPopupX+padding+10, textY, 14, rl.DarkGray)
 
 		// Create edit button beside the complex text
@@ -892,7 +897,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 			}
 
 			// Set up editor fields based on whether texture is complex
-			if tex.IsComplex && len(tex.Frames) > 0 {
+			if tex.IsAnimated && len(tex.Frames) > 0 {
 				// Go straight to advanced editor for complex textures
 				editor.advAnimationTimeStr = fmt.Sprintf("%.2f", tex.AnimationTime)
 				editor.advFrameCountStr = fmt.Sprintf("%d", len(tex.Frames))
@@ -972,6 +977,435 @@ func (m *MapMaker) renderTileInfoPopup() {
 	// Render texture editor if active
 	if m.uiState.textureEditor != nil && m.uiState.textureEditor.visible {
 		m.renderTextureEditor()
+	}
+}
+
+type NPCEditorState struct {
+	visible     bool
+	pos         beam.Position
+	name        string
+	health      string
+	attack      string
+	defense     string
+	attackSpeed string
+	attackRange string
+	moveSpeed   string
+	isHostile   bool
+	aggroRange  string
+
+	// Texture editing state
+	editingDirection beam.Direction
+	textures         *beam.NPCTexture
+	frameCountStr    string
+	animationTimeStr string
+	selectedFrames   []string
+}
+
+func (m *MapMaker) renderNPCEditor() {
+	editor := m.uiState.npcEditor
+
+	// Dialog dimensions and position
+	dialogWidth := 800
+	dialogHeight := 650
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw semi-transparent background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+
+	// Draw main dialog box
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Title
+	rl.DrawText("NPC Editor", int32(dialogX+20), int32(dialogY+20), 24, rl.Black)
+
+	// Layout constants
+	const (
+		padding     = 20
+		labelWidth  = 120
+		inputWidth  = 150
+		inputHeight = 30
+		columnWidth = 350
+	)
+
+	// Start positions for the two columns
+	leftX := dialogX + padding
+	rightX := dialogX + columnWidth + padding
+	startY := dialogY + 80
+
+	// Helper function for input fields
+	createNPCInput := func(label string, value *string, x, y int, numeric bool) {
+		rl.DrawText(label, int32(x), int32(y+8), 16, rl.Black)
+		inputRect := rl.Rectangle{
+			X:      float32(x + labelWidth),
+			Y:      float32(y),
+			Width:  float32(inputWidth),
+			Height: float32(inputHeight),
+		}
+
+		rl.DrawRectangleRec(inputRect, rl.LightGray)
+		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeNPCInput = label
+		}
+
+		if m.uiState.activeNPCInput == label {
+			rl.DrawRectangleLinesEx(inputRect, 2, rl.Blue)
+
+			key := rl.GetCharPressed()
+			for key > 0 {
+				if numeric {
+					if (key >= '0' && key <= '9') || key == '.' {
+						*value += string(key)
+					}
+				} else {
+					if key >= 32 && key <= 126 {
+						*value += string(key)
+					}
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Left column - Basic attributes
+	y := startY
+	createNPCInput("Name", &editor.name, leftX, y, false)
+	y += inputHeight + padding
+	createNPCInput("Health", &editor.health, leftX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Attack", &editor.attack, leftX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Defense", &editor.defense, leftX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Attack Speed", &editor.attackSpeed, leftX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Attack Range", &editor.attackRange, leftX, y, true)
+
+	// Right column - Movement and behavior
+	y = startY
+	createNPCInput("Move Speed", &editor.moveSpeed, rightX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Aggro Range", &editor.aggroRange, rightX, y, true)
+	y += inputHeight + padding
+
+	// Hostile checkbox
+	checkboxRect := rl.Rectangle{
+		X:      float32(rightX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputHeight),
+		Height: float32(inputHeight),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.isHostile {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Hostile", int32(rightX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.isHostile = !editor.isHostile
+	}
+
+	// Direction selector
+	y += inputHeight + padding*2
+	rl.DrawText("Direction Textures", int32(rightX), int32(y), 16, rl.Black)
+	y += 25
+
+	dirBtnSize := int32(60)
+	dirBtnSpacing := int32(5)
+	dirStartX := rightX + (columnWidth-int(dirBtnSize*3+dirBtnSpacing*2))/2
+
+	// Up button
+	upBtn := rl.Rectangle{
+		X:      float32(int32(dirStartX) + dirBtnSize + dirBtnSpacing),
+		Y:      float32(y),
+		Width:  float32(dirBtnSize),
+		Height: float32(dirBtnSize),
+	}
+
+	// Left button
+	leftBtn := rl.Rectangle{
+		X:      float32(dirStartX),
+		Y:      float32(int32(y) + dirBtnSize + dirBtnSpacing),
+		Width:  float32(dirBtnSize),
+		Height: float32(dirBtnSize),
+	}
+
+	// Down button
+	downBtn := rl.Rectangle{
+		X:      float32(int32(dirStartX) + dirBtnSize + dirBtnSpacing),
+		Y:      float32(int32(y) + dirBtnSize + dirBtnSpacing),
+		Width:  float32(dirBtnSize),
+		Height: float32(dirBtnSize),
+	}
+
+	// Right button
+	rightBtn := rl.Rectangle{
+		X:      float32(int32(dirStartX) + (dirBtnSize+dirBtnSpacing)*2),
+		Y:      float32(int32(y) + dirBtnSize + dirBtnSpacing),
+		Width:  float32(dirBtnSize),
+		Height: float32(dirBtnSize),
+	}
+
+	// Draw direction buttons with textures if set
+	drawDirButton := func(btn rl.Rectangle, dir beam.Direction, label string) {
+		isSelected := editor.editingDirection == dir
+		btnColor := rl.LightGray
+		if isSelected {
+			btnColor = rl.Blue
+		}
+
+		rl.DrawRectangleRec(btn, btnColor)
+
+		var tex *beam.AnimatedTexture
+		switch dir {
+		case beam.DirUp:
+			tex = editor.textures.Up
+		case beam.DirDown:
+			tex = editor.textures.Down
+		case beam.DirLeft:
+			tex = editor.textures.Left
+		case beam.DirRight:
+			tex = editor.textures.Right
+		}
+
+		if len(tex.Frames) > 0 && tex.Frames[0].Name != "" {
+			info, err := m.resources.GetTexture("default", tex.Frames[0].Name)
+			if err == nil {
+				scale := float32(dirBtnSize-10) / info.Region.Width
+				if info.Region.Height*scale > float32(dirBtnSize-10) {
+					scale = float32(dirBtnSize-10) / info.Region.Height
+				}
+
+				rl.DrawTexturePro(
+					info.Texture,
+					info.Region,
+					rl.Rectangle{
+						X:      btn.X + (btn.Width-info.Region.Width*scale)/2,
+						Y:      btn.Y + (btn.Height-info.Region.Height*scale)/2,
+						Width:  info.Region.Width * scale,
+						Height: info.Region.Height * scale,
+					},
+					rl.Vector2{}, 0, rl.White,
+				)
+			}
+		} else {
+			rl.DrawText(label, int32(btn.X+(btn.Width-float32(rl.MeasureText(label, 16)))/2),
+				int32(btn.Y+btn.Height/2-8), 16, rl.Black)
+		}
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), btn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			editor.editingDirection = dir
+			editor.selectedFrames = make([]string, 1)
+			if len(tex.Frames) > 0 {
+				editor.frameCountStr = fmt.Sprintf("%d", len(tex.Frames))
+				editor.animationTimeStr = fmt.Sprintf("%.1f", tex.AnimationTime)
+				editor.selectedFrames = make([]string, len(tex.Frames))
+				for i, frame := range tex.Frames {
+					editor.selectedFrames[i] = frame.Name
+				}
+			} else {
+				editor.frameCountStr = "1"
+				editor.animationTimeStr = "0.5"
+			}
+		}
+	}
+
+	drawDirButton(upBtn, beam.DirUp, "Up")
+	drawDirButton(leftBtn, beam.DirLeft, "Left")
+	drawDirButton(downBtn, beam.DirDown, "Down")
+	drawDirButton(rightBtn, beam.DirRight, "Right")
+
+	// Animation settings for selected direction
+	y += int(dirBtnSize)*2 + int(dirBtnSpacing)*2 + padding
+
+	createNPCInput("Frame Count", &editor.frameCountStr, rightX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Animation Time", &editor.animationTimeStr, rightX, y, true)
+	y += inputHeight + padding
+
+	// Frame selection grid
+	frameCount, _ := strconv.Atoi(editor.frameCountStr)
+	if frameCount > 0 {
+		rl.DrawText("Animation Frames:", int32(rightX), int32(y), 16, rl.Black)
+		y += 25
+
+		frameSize := int32(50)
+		framePadding := int32(5)
+		framesPerRow := (columnWidth - padding*2) / (int(frameSize) + int(framePadding))
+
+		// Adjust selected frames array size if needed
+		if len(editor.selectedFrames) != frameCount {
+			newFrames := make([]string, frameCount)
+			copy(newFrames, editor.selectedFrames)
+			editor.selectedFrames = newFrames
+		}
+
+		for i := 0; i < frameCount; i++ {
+			row := i / framesPerRow
+			col := i % framesPerRow
+
+			frameX := rightX + col*(int(frameSize)+int(framePadding))
+			frameY := y + row*(int(frameSize)+int(framePadding))
+
+			frameRect := rl.Rectangle{
+				X:      float32(frameX),
+				Y:      float32(frameY),
+				Width:  float32(frameSize),
+				Height: float32(frameSize),
+			}
+
+			rl.DrawRectangleRec(frameRect, rl.LightGray)
+
+			if i < len(editor.selectedFrames) && editor.selectedFrames[i] != "" {
+				info, err := m.resources.GetTexture("default", editor.selectedFrames[i])
+				if err == nil {
+					scale := float32(frameSize-10) / info.Region.Width
+					if info.Region.Height*scale > float32(frameSize-10) {
+						scale = float32(frameSize-10) / info.Region.Height
+					}
+
+					rl.DrawTexturePro(
+						info.Texture,
+						info.Region,
+						rl.Rectangle{
+							X:      frameRect.X + (frameRect.Width-info.Region.Width*scale)/2,
+							Y:      frameRect.Y + (frameRect.Height-info.Region.Height*scale)/2,
+							Width:  info.Region.Width * scale,
+							Height: info.Region.Height * scale,
+						},
+						rl.Vector2{}, 0, rl.White,
+					)
+				}
+			} else {
+				rl.DrawText("+", int32(frameRect.X+frameRect.Width/2-5),
+					int32(frameRect.Y+frameRect.Height/2-8), 16, rl.DarkGray)
+			}
+
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				m.showResourceViewer = true
+				// m.uiState.textureEditor = &TextureEditorState{
+				// 	visible:                false,
+				// 	advSelectingFrameIndex: i,
+				// }
+			}
+		}
+	}
+
+	// Save/Cancel buttons
+	saveBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 200),
+		Y:      float32(dialogY + dialogHeight - 50),
+		Width:  80,
+		Height: 30,
+	}
+
+	cancelBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 100),
+		Y:      float32(dialogY + dialogHeight - 50),
+		Width:  80,
+		Height: 30,
+	}
+
+	rl.DrawRectangleRec(saveBtn, rl.Green)
+	rl.DrawRectangleRec(cancelBtn, rl.Red)
+	rl.DrawText("Save", int32(saveBtn.X+25), int32(saveBtn.Y+8), 16, rl.White)
+	rl.DrawText("Cancel", int32(cancelBtn.X+20), int32(cancelBtn.Y+8), 16, rl.White)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.closeNPCEditor()
+		return
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Validate and save NPC data
+		health, _ := strconv.Atoi(editor.health)
+		attack, _ := strconv.Atoi(editor.attack)
+		defense, _ := strconv.Atoi(editor.defense)
+		attackSpeed, _ := strconv.ParseFloat(editor.attackSpeed, 64)
+		attackRange, _ := strconv.ParseFloat(editor.attackRange, 64)
+		moveSpeed, _ := strconv.ParseFloat(editor.moveSpeed, 64)
+		aggroRange, _ := strconv.Atoi(editor.aggroRange)
+
+		// Create NPC data
+		npcData := beam.NPCData{
+			Name:            editor.name,
+			Texture:         editor.textures,
+			Health:          health,
+			MaxHealth:       health,
+			Attack:          attack,
+			BaseAttack:      attack,
+			Defense:         defense,
+			BaseDefense:     defense,
+			AttackSpeed:     attackSpeed,
+			BaseAttackSpeed: attackSpeed,
+			AttackRange:     attackRange,
+			BaseAttackRange: attackRange,
+			MoveSpeed:       moveSpeed,
+			Direction:       beam.DirDown,
+			Hostile:         editor.isHostile,
+			AggroRange:      aggroRange,
+			Attackable:      true,
+		}
+
+		// Validate all inputs
+		if editor.name == "" || editor.health == "" || editor.attack == "" ||
+			editor.defense == "" || editor.attackSpeed == "" || editor.attackRange == "" ||
+			editor.moveSpeed == "" || editor.aggroRange == "" {
+			rl.DrawText("Please fill in all fields.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if health <= 0 || attack <= 0 || defense < 0 || attackSpeed <= 0 ||
+			attackRange <= 0 || moveSpeed <= 0 || aggroRange < 0 {
+			rl.DrawText("Values must be positive.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if _, err := strconv.Atoi(editor.aggroRange); err != nil {
+			rl.DrawText("Aggro Range must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if _, err := strconv.Atoi(editor.health); err != nil {
+			rl.DrawText("Health must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if _, err := strconv.Atoi(editor.attack); err != nil {
+			rl.DrawText("Attack must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if _, err := strconv.Atoi(editor.defense); err != nil {
+			rl.DrawText("Defense must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		// texture for every direction
+		if len(editor.textures.Up.Frames) == 0 || len(editor.textures.Down.Frames) == 0 ||
+			len(editor.textures.Left.Frames) == 0 || len(editor.textures.Right.Frames) == 0 {
+			rl.DrawText("Please select textures for all directions.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+
+		// Save NPC data to the tile
+		pos := editor.pos
+		m.tileGrid.Map.NPCs = append(m.tileGrid.Map.NPCs, &beam.NPC{
+			Pos:  pos,
+			Data: npcData,
+		})
+		m.closeNPCEditor()
 	}
 }
 
@@ -1192,7 +1626,7 @@ func (m *MapMaker) renderTextureEditor() {
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), advancedBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		// Initialize advanced editor state when opening it
 		tex := editor.tile.Textures[editor.texIndex]
-		if tex.IsComplex && len(tex.Frames) > 0 {
+		if tex.IsAnimated && len(tex.Frames) > 0 {
 			editor.advAnimationTimeStr = fmt.Sprintf("%.2f", tex.AnimationTime)
 			editor.advFrameCountStr = fmt.Sprintf("%d", len(tex.Frames))
 			editor.advSelectedFrames = make([]string, len(tex.Frames))
@@ -1486,13 +1920,13 @@ func (m *MapMaker) renderAdvancedEditor() {
 						originalTint = originalFrame.Tint
 					}
 
-					tex.IsComplex = frameCount > 1
+					tex.IsAnimated = frameCount > 1
 					tex.AnimationTime = animTime
 					tex.CurrentFrame = 0
-					tex.Frames = make([]beam.TileTextureFrame, 0, frameCount)
+					tex.Frames = make([]beam.Texture, 0, frameCount)
 
 					for i := 0; i < frameCount; i++ {
-						newFrame := beam.TileTextureFrame{
+						newFrame := beam.Texture{
 							Name:     editor.advSelectedFrames[i],
 							Rotation: originalRotation,
 							Scale:    originalScale,
@@ -1536,4 +1970,11 @@ func (m *MapMaker) closeAllEditors() {
 	m.closeTextureEditor()
 	m.showTileInfo = false
 	m.uiState.activeInput = ""
+}
+
+func (m *MapMaker) closeNPCEditor() {
+	m.uiState.npcEditor = nil
+	m.showResourceViewer = false  // Close the resource viewer if it was open
+	m.uiState.activeInput = ""    // Clear any active input
+	m.uiState.activeNPCInput = "" // Clear NPC-specific input
 }
