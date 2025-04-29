@@ -7,24 +7,21 @@
 - Core Game Features
   - [x] Game state management (Menu, Game, Pause, Settings, etc.)
   - [x] Tile-based map system with support for:
-    - Multiple tile types (Walls, Floors, Objects)
+    - Multiple tile types (Walls, Floors, etc.)
     - Complex multi-frame textures with transitions
     - Custom tile properties (rotation, scale, offset, tinting)
-    - Map metadata (start, exit, respawn points)
+    - NPCs with custom properties
 - Map editor
   - [x] Design, save, and export beam-compatible pixel maps
   - [x] Grid-based tile editor with resizable canvas
-  - [x] Multiple resolution support with dynamic grid sizing
   - [x] Real-time tile editing with multi-layer support
-  - [x] Advanced texture management, with a variety of editing tools
-  - [x] Scrollable viewport to design large maps
+  - [x] Resource viewer with preview for all loaded textures.
+  - [x] Place NPCs and set custom properties
   - For more details, [view the Map Maker tool](https://github.com/ztkent/beam/tree/main/tools/mapmaker)
 - Resource management
   - [x] Support for individual textures and sprite sheets
   - [x] Automatic sprite sheet slicing with configurable grid size
   - [x] Preview slicing and configure sprite sheet options in the [Spritesheet Viewer](https://github.com/ztkent/beam/tree/main/tools/spritesheet-viewer) utility
-  - [x] Recent textures toolbar for quick access
-  - [x] Resource viewer with preview for all loaded textures.
   - [x] Scenes allow for dynamic loading/unloading of resources
   - [x] Load custom fonts
 - Audio

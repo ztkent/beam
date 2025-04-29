@@ -311,7 +311,3 @@ func LoadSound(name string, path string) *Sound {
 		Loaded: true,
 	}
 }
-
-// menuStream := rl.LoadMusicStream("../assets/mainmenu.mp3")
-// gameStream := rl.LoadMusicStream("../assets/gamemusic.mp3")
-// gameOverSound := rl.LoadSound("../assets/gameover.wav")
