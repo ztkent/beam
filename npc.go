@@ -20,7 +20,6 @@ type NPC struct {
 	Pos            Position
 	LastMoveTime   float32
 	LastActionTime time.Time
-	MoveDelay      float32
 	Data           NPCData
 }
 
@@ -78,7 +77,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) {
 		return
 	}
 	currentTime := float32(rl.GetTime())
-	if currentTime-npc.LastMoveTime < npc.MoveDelay {
+	if currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1) {
 		return
 	}
 
