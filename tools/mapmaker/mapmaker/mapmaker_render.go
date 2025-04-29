@@ -346,13 +346,13 @@ func (m *MapMaker) renderUI() {
 		m.renderTileInfoPopup()
 	}
 
-	if m.showResourceViewer {
-		m.renderResourceViewer()
-	}
-
 	// Render NPC editor if active
 	if m.uiState.npcEditor != nil && m.uiState.npcEditor.visible {
 		m.renderNPCEditor()
+	}
+
+	if m.showResourceViewer {
+		m.renderResourceViewer()
 	}
 
 	// Draw status bar
