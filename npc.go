@@ -72,10 +72,25 @@ func NewSimpleNPCTexture(name string) *NPCTexture {
 
 // Move the NPC towards the player if within aggro range
 // or move randomly if not. The NPC will also check for obstacles.
-func (npc *NPC) Update(playerPos Position, tiles [][]Tile) {
+func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 	if npc.Data.Dead {
-		return
+		totalDyingFrames := 32
+		npc.Data.DyingFrames++
+		if npc.Data.DyingFrames >= totalDyingFrames {
+			return true
+		}
+	} else if npc.Data.TookDamageThisFrame {
+		totalDamageFrames := 32
+		npc.Data.DamageFrames++
+		if npc.Data.DamageFrames == 1 {
+			npc.knockback(tiles, 1)
+		}
+		if npc.Data.DamageFrames >= int(totalDamageFrames) {
+			npc.Data.DamageFrames = 0
+			npc.Data.TookDamageThisFrame = false
+		}
 	}
+
 	currentTime := float32(rl.GetTime())
 	if currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1) {
 		return
@@ -182,10 +197,11 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) {
 	}
 
 	npc.LastMoveTime = currentTime
+	return false
 }
 
 // Attack the player if within attack range and the NPC is hostile.
-func (npc *NPC) Attack(playerPos Position) bool {
+func (npc *NPC) Attack(playerPos Position) (hit bool) {
 	if !npc.Data.Hostile || npc.Data.Dead {
 		return false
 	}
@@ -212,4 +228,60 @@ func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
 	default:
 		return nil
 	}
+}
+
+// Knockback the NPC in the opposite direction theyre facing
+func (npc *NPC) knockback(tiles [][]Tile, dist int) {
+	height := len(tiles)
+	width := 0
+	if height > 0 {
+		width = len(tiles[0])
+	}
+
+	// Store initial beam.Position
+	tempX := npc.Pos.X
+	tempY := npc.Pos.Y
+
+	// Calculate target beam.Position based on direction
+	switch npc.Data.Direction {
+	case DirRight:
+		// Check each tile in the knockback path
+		for i := 1; i <= dist; i++ {
+			nextX := tempX - i
+			// Stop if we hit bounds or a wall
+			if nextX < 0 || tiles[tempY][nextX].Type != FloorTile {
+				break
+			}
+			tempX = nextX
+		}
+	case DirLeft:
+		for i := 1; i <= dist; i++ {
+			nextX := tempX + i
+			if nextX >= width || tiles[tempY][nextX].Type != FloorTile {
+				break
+			}
+			tempX = nextX
+		}
+	case DirUp:
+		for i := 1; i <= dist; i++ {
+			nextY := tempY + i
+			if nextY >= height || tiles[nextY][tempX].Type != FloorTile {
+				break
+			}
+			tempY = nextY
+		}
+	case DirDown:
+		for i := 1; i <= dist; i++ {
+			nextY := tempY - i
+			if nextY < 0 || tiles[nextY][tempX].Type != FloorTile {
+				break
+			}
+			tempY = nextY
+		}
+	}
+
+	// Update enemy beam.Position to final valid location
+	tiles[npc.Pos.Y][npc.Pos.X].Type = FloorTile
+	npc.Pos.X = tempX
+	npc.Pos.Y = tempY
 }

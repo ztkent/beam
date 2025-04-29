@@ -449,6 +449,14 @@ func (m *MapMaker) update() {
 			}
 		}
 	}
+
+	// Handle NPC updates
+	for _, npc := range m.tileGrid.NPCs {
+		npc.Update(beam.Position{
+			X: -1,
+			Y: -1,
+		}, m.tileGrid.Tiles)
+	}
 }
 
 // handleMapTools handles the selecting and swapping of tools
