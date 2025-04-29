@@ -8,7 +8,7 @@
   - [x] Game state management (Menu, Game, Pause, Settings, etc.)
   - [x] Tile-based map system with support for:
     - Multiple tile types (Walls, Floors, etc.)
-    - Complex multi-frame textures with transitions
+    - Animated multi-frame textures with transitions
     - Custom tile properties (rotation, scale, offset, tinting)
     - NPCs with custom properties
 - Map editor

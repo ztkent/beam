@@ -20,46 +20,12 @@ const (
 type Tile struct {
 	Type     TileType
 	Pos      Position
-	Textures []*TileTexture
+	Textures []*AnimatedTexture
 }
 
-type TileTexture struct {
-	Frames []TileTextureFrame
-
-	// Complex textures can have multiple frames, with a transition
-	IsComplex     bool
-	AnimationTime float64
-	CurrentFrame  int
-
-	lastFrameTime float64
-}
-
-func (t *TileTexture) GetCurrentFrame(currentTime float64) TileTextureFrame {
-	if t.IsComplex {
-		if currentTime-t.lastFrameTime >= t.AnimationTime {
-			t.CurrentFrame = (t.CurrentFrame + 1) % len(t.Frames)
-			t.lastFrameTime = currentTime
-		}
-		if t.CurrentFrame >= len(t.Frames) {
-			t.CurrentFrame = 0
-		}
-		return t.Frames[t.CurrentFrame]
-	}
-	return t.Frames[0]
-}
-
-type TileTextureFrame struct {
-	Name     string
-	Rotation float64
-	Scale    float64
-	OffsetX  float64
-	OffsetY  float64
-	Tint     rl.Color
-}
-
-func NewSimpleTileTexture(name string) *TileTexture {
-	return &TileTexture{
-		Frames: []TileTextureFrame{
+func NewSimpleTileTexture(name string) *AnimatedTexture {
+	return &AnimatedTexture{
+		Frames: []Texture{
 			{
 				Name:     name,
 				Rotation: 0,
@@ -69,6 +35,6 @@ func NewSimpleTileTexture(name string) *TileTexture {
 				Tint:     rl.White,
 			},
 		},
-		IsComplex: false,
+		IsAnimated: false,
 	}
 }

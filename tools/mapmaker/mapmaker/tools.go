@@ -130,12 +130,12 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 			sourceTex := sourceTile.Textures[i]
 
 			// Check if both textures are complex or simple
-			if tex.IsComplex != sourceTex.IsComplex {
+			if tex.IsAnimated != sourceTex.IsAnimated {
 				return false
 			}
 
 			// Compare frames if complex
-			if tex.IsComplex {
+			if tex.IsAnimated {
 				if len(tex.Frames) != len(sourceTex.Frames) {
 					return false
 				}

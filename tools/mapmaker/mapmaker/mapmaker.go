@@ -77,6 +77,10 @@ type UIState struct {
 	textureEditor      *TextureEditorState
 	activeInput        string
 	showAdvancedEditor bool
+
+	// NPC Editor State
+	npcEditor      *NPCEditorState
+	activeNPCInput string
 }
 
 type TileGrid struct {
@@ -353,7 +357,7 @@ func (m *MapMaker) update() {
 						tile := &m.tileGrid.Tiles[selectedY][selectedX]
 						if len(tile.Textures) > 0 {
 							lastTexture := tile.Textures[len(tile.Textures)-1]
-							if lastTexture.IsComplex && len(lastTexture.Frames) > 0 {
+							if lastTexture.IsAnimated && len(lastTexture.Frames) > 0 {
 								lastTexture.Frames = lastTexture.Frames[:len(lastTexture.Frames)-1]
 								if len(lastTexture.Frames) == 0 {
 									tile.Textures = tile.Textures[:len(tile.Textures)-1]
@@ -409,6 +413,34 @@ func (m *MapMaker) update() {
 							m.tileGrid.Respawn = tile
 						case 3:
 							m.tileGrid.Exit = tile
+						}
+					}
+					break
+				case "npc":
+					// Initialize NPC editor
+					if m.uiState.npcEditor == nil || !m.uiState.npcEditor.visible {
+						m.uiState.npcEditor = &NPCEditorState{
+							visible: true,
+							pos:     m.tileGrid.selectedTiles[0], // Use first selected tile
+							name:    "New NPC",
+							textures: &beam.NPCTexture{
+								Up:    &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
+								Down:  &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
+								Left:  &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
+								Right: &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
+							},
+							health:           "100",
+							attack:           "10",
+							defense:          "5",
+							attackSpeed:      "1.0",
+							attackRange:      "1.0",
+							moveSpeed:        "3.0",
+							aggroRange:       "5",
+							isHostile:        true,
+							editingDirection: beam.DirDown,
+							frameCountStr:    "1",
+							animationTimeStr: "0.5",
+							selectedFrames:   make([]string, 1),
 						}
 					}
 					break
@@ -690,7 +722,7 @@ func (m *MapMaker) initTileGrid() {
 			m.tileGrid.Tiles[i][j] = beam.Tile{
 				Type:     beam.FloorTile,
 				Pos:      beam.Position{X: j, Y: i},
-				Textures: make([]*beam.TileTexture, 0),
+				Textures: make([]*beam.AnimatedTexture, 0),
 			}
 		}
 	}
