@@ -74,6 +74,9 @@ func NewSimpleNPCTexture(name string) *NPCTexture {
 // Move the NPC towards the player if within aggro range
 // or move randomly if not. The NPC will also check for obstacles.
 func (npc *NPC) Update(playerPos Position, tiles [][]Tile) {
+	if npc.Data.Dead {
+		return
+	}
 	currentTime := float32(rl.GetTime())
 	if currentTime-npc.LastMoveTime < npc.MoveDelay {
 		return
@@ -184,7 +187,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) {
 
 // Attack the player if within attack range and the NPC is hostile.
 func (npc *NPC) Attack(playerPos Position) bool {
-	if !npc.Data.Hostile {
+	if !npc.Data.Hostile || npc.Data.Dead {
 		return false
 	}
 	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)

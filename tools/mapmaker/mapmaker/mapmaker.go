@@ -2,6 +2,7 @@ package mapmaker
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"slices"
@@ -939,6 +940,45 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 		return
 	}
 
+	// Check if selection is for NPC editor frame
+	if m.uiState.npcEditor != nil && m.uiState.npcEditor.visible {
+		editor := m.uiState.npcEditor
+		frameCount, _ := strconv.Atoi(editor.frameCountStr)
+		if frameCount > 0 {
+			// Get the current direction's texture
+			var currentTex *beam.AnimatedTexture
+			switch editor.editingDirection {
+			case beam.DirUp:
+				currentTex = editor.textures.Up
+			case beam.DirDown:
+				currentTex = editor.textures.Down
+			case beam.DirLeft:
+				currentTex = editor.textures.Left
+			case beam.DirRight:
+				currentTex = editor.textures.Right
+			}
+
+			// Find first empty frame slot and fill it
+			for i := 0; i < frameCount; i++ {
+				if i >= len(editor.selectedFrames) || editor.selectedFrames[i] == "" {
+					editor.selectedFrames[i] = texInfo.Name
+
+					// Update the texture frames
+					currentTex.Frames = make([]beam.Texture, frameCount)
+					for j := 0; j < frameCount; j++ {
+						if j < len(editor.selectedFrames) && editor.selectedFrames[j] != "" {
+							currentTex.Frames[j] = beam.Texture{Name: editor.selectedFrames[j]}
+						}
+					}
+					break
+				}
+			}
+		}
+		m.showResourceViewer = false
+		return
+	}
+
+	// It was a selection from the main UI
 	// Add to recent textures if not already present
 	m.uiState.activeTexture = texInfo
 	for i, name := range m.uiState.recentTextures {
