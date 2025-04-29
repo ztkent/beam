@@ -55,6 +55,20 @@ func (m *MapMaker) renderGrid() {
 			// Render tile at this location
 			tile := m.tileGrid.Tiles[y][x]
 			m.renderGridTile(pos, beam.Position{X: x, Y: y}, tile)
+
+			// Draw any NPC's on the map
+			for _, npc := range m.tileGrid.NPCs {
+				if npc.Pos.X == x && npc.Pos.Y == y {
+					npcX := startX + (x-viewStartX)*m.uiState.tileSize
+					npcY := startY + (y-viewStartY)*m.uiState.tileSize
+					m.resources.RenderNPC(npc, rl.Rectangle{
+						X:      float32(npcX),
+						Y:      float32(npcY),
+						Width:  float32(m.uiState.tileSize),
+						Height: float32(m.uiState.tileSize),
+					}, m.uiState.tileSize)
+				}
+			}
 		}
 	}
 

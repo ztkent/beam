@@ -8,7 +8,7 @@ import (
 	"github.com/ztkent/beam"
 )
 
-func (rm *ResourceManager) RenderTexture(pos rl.Rectangle, texture *beam.AnimatedTexture, tileSize int) {
+func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.Rectangle, tileSize int) {
 	if texture == nil {
 		return
 	}
@@ -75,20 +75,13 @@ func (rm *ResourceManager) RenderTexture(pos rl.Rectangle, texture *beam.Animate
 	}
 }
 
-func (rm *ResourceManager) RenderNPC(npc *beam.NPC, viewport beam.Viewport, tileSize int) {
-	pos := rl.Rectangle{
-		X:      float32((npc.Pos.X - viewport.X) * tileSize),
-		Y:      float32((npc.Pos.Y - viewport.Y) * tileSize),
-		Width:  float32(tileSize),
-		Height: float32(tileSize),
-	}
-
+func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize int) {
 	if npc.Data.Dead {
 		// Calculate alpha based on dying frames (fade out over 32 frames)
 		totalDyingFrames := 32
 		alpha := uint8(255 * (1.0 - (float32(npc.Data.DyingFrames) / float32(totalDyingFrames))))
 		fadeColor := rl.NewColor(255, 255, 255, alpha)
-		rm.RenderTexture(pos, &beam.AnimatedTexture{
+		rm.RenderTexture(&beam.AnimatedTexture{
 			Frames: []beam.Texture{
 				{
 					Name:     npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name,
@@ -100,7 +93,7 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, viewport beam.Viewport, tile
 				},
 			},
 			IsAnimated: false,
-		}, tileSize)
+		}, pos, tileSize)
 
 	} else if npc.Data.TookDamageThisFrame {
 		// Calculate damage flash alpha
@@ -113,8 +106,8 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, viewport beam.Viewport, tile
 		damageColor := rl.NewColor(255, 0, 0, uint8(255*alpha)) // Bright red with fade
 
 		// Render both the enemy and the damage overlay
-		rm.RenderTexture(pos, npc.Data.Texture.Up, tileSize)
-		rm.RenderTexture(pos, &beam.AnimatedTexture{
+		rm.RenderTexture(npc.Data.Texture.Up, pos, tileSize)
+		rm.RenderTexture(&beam.AnimatedTexture{
 			Frames: []beam.Texture{
 				{
 					Name:     npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name,
@@ -126,14 +119,14 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, viewport beam.Viewport, tile
 				},
 			},
 			IsAnimated: false,
-		}, tileSize)
+		}, pos, tileSize)
 
 		if npc.Data.DamageFrames >= int(totalDamageFrames) {
 			npc.Data.DamageFrames = 0
 			npc.Data.TookDamageThisFrame = false
 		}
 	} else {
-		rm.RenderTexture(pos, beam.NewSimpleTileTexture(npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name), tileSize)
+		rm.RenderTexture(beam.NewSimpleTileTexture(npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name), pos, tileSize)
 	}
 
 	// Only show health bar for 5 seconds after health changes
