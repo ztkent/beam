@@ -8,7 +8,6 @@ Design, save, and export game maps compatible with the Beam engine.
 ### Map Creation
 
 - Grid-based tile editor with resizable canvas
-- Multiple resolution support with dynamic grid sizing
 - Real-time tile editing with multi-layer support
 - Advanced texture management, with a variety of editing tools
 - Viewport navigation for large maps
@@ -25,6 +24,11 @@ Design, save, and export game maps compatible with the Beam engine.
   - Dungeon Entrance (multiple allowed)
   - Respawn Point
   - Exit Point
+- **NPC**: Place NPCs with configurable properties:
+  - Name
+  - Textures
+  - Movement
+  - Spawn Point
 
 ### Resource Management
 
