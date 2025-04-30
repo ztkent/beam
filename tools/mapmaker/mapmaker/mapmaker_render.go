@@ -369,6 +369,10 @@ func (m *MapMaker) renderUI() {
 		m.renderResourceViewer()
 	}
 
+	if m.uiState.showNPCList {
+		m.renderNPCList()
+	}
+
 	// Draw status bar
 	rl.DrawRectangle(0, m.window.height-int32(m.uiState.statusBarHeight),
 		m.window.width, int32(m.uiState.statusBarHeight), rl.RayWhite)
@@ -1420,6 +1424,130 @@ func (m *MapMaker) renderNPCEditor() {
 			Data: npcData,
 		})
 		m.closeNPCEditor()
+	}
+}
+
+// renderNPCList renders the NPC list view
+func (m *MapMaker) renderNPCList() {
+	dialogWidth := 600
+	dialogHeight := 400
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw semi-transparent background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+
+	// Draw dialog background
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Draw title
+	rl.DrawText("NPC List", int32(dialogX+20), int32(dialogY+20), 24, rl.Black)
+
+	// Close button
+	closeBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 40),
+		Y:      float32(dialogY + 10),
+		Width:  30,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(closeBtn, rl.LightGray)
+	rl.DrawText("X", int32(closeBtn.X+10), int32(closeBtn.Y+5), 20, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.showNPCList = false
+	}
+
+	// List content area
+	contentY := dialogY + 60
+	rowHeight := int32(40)
+	padding := int32(10)
+
+	// Draw headers
+	rl.DrawText("Name", int32(dialogX+20), int32(contentY), 20, rl.DarkGray)
+	rl.DrawText("Position", int32(dialogX+200), int32(contentY), 20, rl.DarkGray)
+	rl.DrawText("Actions", int32(dialogX+400), int32(contentY), 20, rl.DarkGray)
+	contentY += 30
+
+	// Draw NPC rows
+	for i, npc := range m.tileGrid.NPCs {
+		y := int32(contentY) + int32(i)*rowHeight
+		rowBg := rl.White
+		if i%2 == 0 {
+			rowBg = rl.LightGray
+		}
+
+		// Draw row background
+		rl.DrawRectangle(
+			int32(dialogX)+10,
+			int32(y),
+			int32(dialogWidth)-20,
+			rowHeight-2,
+			rowBg,
+		)
+
+		// Draw NPC info
+		rl.DrawText(npc.Data.Name, int32(dialogX+20), int32(y+10), 16, rl.Black)
+		rl.DrawText(fmt.Sprintf("(%d, %d)", npc.Pos.X, npc.Pos.Y), int32(dialogX+200), int32(y+10), 16, rl.Black)
+
+		// Edit button
+		editBtn := rl.Rectangle{
+			X:      float32(dialogX + 400),
+			Y:      float32(y + padding/2),
+			Width:  60,
+			Height: float32(rowHeight - padding),
+		}
+		rl.DrawRectangleRec(editBtn, rl.Blue)
+		rl.DrawText("Edit", int32(editBtn.X+15), int32(editBtn.Y+5), 16, rl.White)
+
+		// Delete button
+		deleteBtn := rl.Rectangle{
+			X:      float32(dialogX + 470),
+			Y:      float32(y + padding/2),
+			Width:  60,
+			Height: float32(rowHeight - padding),
+		}
+		rl.DrawRectangleRec(deleteBtn, rl.Red)
+		rl.DrawText("Delete", int32(deleteBtn.X+5), int32(deleteBtn.Y+5), 16, rl.White)
+
+		// Handle button clicks
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.npcEditor = &NPCEditorState{
+				visible:          true,
+				pos:              npc.Pos,
+				name:             npc.Data.Name,
+				health:           strconv.Itoa(npc.Data.Health),
+				attack:           strconv.Itoa(npc.Data.Attack),
+				defense:          strconv.Itoa(npc.Data.Defense),
+				attackSpeed:      fmt.Sprintf("%.1f", npc.Data.AttackSpeed),
+				attackRange:      fmt.Sprintf("%.1f", npc.Data.AttackRange),
+				moveSpeed:        fmt.Sprintf("%.1f", npc.Data.MoveSpeed),
+				aggroRange:       strconv.Itoa(npc.Data.AggroRange),
+				isHostile:        npc.Data.Hostile,
+				textures:         npc.Data.Texture,
+				editingDirection: beam.DirDown,
+				frameCountStr:    "1",
+				animationTimeStr: "0.5",
+				selectedFrames:   make([]string, 1),
+			}
+			// Remove the old NPC before editing
+			m.tileGrid.NPCs = append(m.tileGrid.NPCs[:i], m.tileGrid.NPCs[i+1:]...)
+			m.uiState.showNPCList = false
+		}
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			// Remove the NPC
+			m.tileGrid.NPCs = append(m.tileGrid.NPCs[:i], m.tileGrid.NPCs[i+1:]...)
+		}
+	}
+
+	if len(m.tileGrid.NPCs) == 0 {
+		rl.DrawText("No NPCs placed on the map", int32(dialogX+200), int32(contentY+20), 20, rl.Gray)
 	}
 }
 
