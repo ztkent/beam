@@ -93,7 +93,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 	}
 
 	currentTime := float32(rl.GetTime())
-	if currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1) {
+	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1)) {
 		return
 	}
 

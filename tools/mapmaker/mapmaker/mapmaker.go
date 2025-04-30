@@ -22,6 +22,7 @@ type MapMaker struct {
 	showResourceViewer bool
 	showTileInfo       bool
 	showRecentTextures bool
+	clipboard          [][]beam.Tile
 }
 
 type Window struct {
@@ -233,6 +234,91 @@ func (m *MapMaker) Run() {
 					m.showToast("Map saved successfully!", ToastSuccess)
 				}
 			}
+		}
+
+		// Clipboard copy
+		if rl.IsKeyPressed(rl.KeyC) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyLeftSuper)) {
+			if !m.tileGrid.hasSelection || len(m.tileGrid.selectedTiles) == 0 {
+				m.showToast("No tiles to copy!", ToastError)
+				continue
+			}
+
+			// Find bounds of selection
+			minX, minY := m.tileGrid.Width, m.tileGrid.Height
+			maxX, maxY := 0, 0
+			for _, pos := range m.tileGrid.selectedTiles {
+				if pos.X < minX {
+					minX = pos.X
+				}
+				if pos.Y < minY {
+					minY = pos.Y
+				}
+				if pos.X > maxX {
+					maxX = pos.X
+				}
+				if pos.Y > maxY {
+					maxY = pos.Y
+				}
+			}
+
+			// Create clipboard array of correct size
+			width := maxX - minX + 1
+			height := maxY - minY + 1
+			m.clipboard = make([][]beam.Tile, height)
+			for i := range m.clipboard {
+				m.clipboard[i] = make([]beam.Tile, width)
+			}
+
+			// Copy selected tiles to clipboard
+			for _, pos := range m.tileGrid.selectedTiles {
+				relX := pos.X - minX
+				relY := pos.Y - minY
+				m.clipboard[relY][relX] = m.tileGrid.Tiles[pos.Y][pos.X]
+			}
+
+			m.showToast("Tiles copied!", ToastSuccess)
+		}
+
+		// Clipboard paste
+		if rl.IsKeyPressed(rl.KeyV) && (rl.IsKeyDown(rl.KeyLeftControl) || rl.IsKeyDown(rl.KeyLeftSuper)) {
+			// Verify we have something to paste and somewhere to paste it
+			if len(m.clipboard) == 0 || !m.tileGrid.hasSelection {
+				m.showToast("Nothing to paste!", ToastError)
+				continue
+			}
+
+			// Get the target position (first selected tile)
+			targetPos := m.tileGrid.selectedTiles[0]
+
+			// Calculate paste bounds
+			pasteHeight := len(m.clipboard)
+			pasteWidth := len(m.clipboard[0])
+
+			// Iterate through clipboard and paste where possible
+			for clipY := 0; clipY < pasteHeight; clipY++ {
+				for clipX := 0; clipX < pasteWidth; clipX++ {
+					// Calculate target grid position
+					gridX := targetPos.X + clipX
+					gridY := targetPos.Y + clipY
+
+					// Skip if outside grid bounds
+					if gridX >= m.tileGrid.Width || gridY >= m.tileGrid.Height {
+						continue
+					}
+
+					// Skip if clipboard tile is empty
+					if len(m.clipboard[clipY][clipX].Textures) == 0 {
+						continue
+					}
+
+					// Copy the tile data
+					m.tileGrid.Tiles[gridY][gridX] = m.clipboard[clipY][clipX]
+					// Update the position to match the new location
+					m.tileGrid.Tiles[gridY][gridX].Pos = beam.Position{X: gridX, Y: gridY}
+				}
+			}
+
+			m.showToast("Tiles pasted!", ToastSuccess)
 		}
 
 		m.update() // Update settings, configs, and UI state.
