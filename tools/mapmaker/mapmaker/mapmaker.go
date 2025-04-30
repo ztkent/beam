@@ -82,6 +82,7 @@ type UIState struct {
 	// NPC Editor State
 	npcEditor      *NPCEditorState
 	activeNPCInput string
+	showNPCList    bool
 }
 
 type TileGrid struct {
@@ -579,6 +580,12 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 				m.uiState.locationMode = (m.uiState.locationMode + 1) % 4
 				modeNames := []string{"Player Start", "Dungeon Entrance", "Respawn", "Exit"}
 				m.showToast(fmt.Sprintf("Location Mode: %s", modeNames[m.uiState.locationMode]), ToastInfo)
+			}
+
+			// Handle NPC list view swap
+			if m.uiState.selectedTool == "npc" {
+				m.uiState.showNPCList = true
+				m.uiState.rightClickStartTime = 0
 			}
 
 			m.uiState.rightClickStartTime = 0
