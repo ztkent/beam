@@ -5,6 +5,8 @@ Design, save, and export game maps compatible with the Beam engine.
 
 ## Features
 
+https://github.com/user-attachments/assets/281bc0b1-f65f-4190-bfd6-65374e96658a
+
 ### Map Creation
 
 - Grid-based tile editor with resizable canvas
