@@ -421,10 +421,11 @@ func (m *MapMaker) update() {
 				case "npc":
 					// Initialize NPC editor
 					if m.uiState.npcEditor == nil || !m.uiState.npcEditor.visible {
+						selectedTile := m.tileGrid.selectedTiles[0] // Use first selected tile
 						m.uiState.npcEditor = &NPCEditorState{
-							visible: true,
-							pos:     m.tileGrid.selectedTiles[0], // Use first selected tile
-							name:    "New NPC",
+							visible:  true,
+							spawnPos: selectedTile,
+							name:     "New NPC",
 							textures: &beam.NPCTexture{
 								Up:    &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
 								Down:  &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
