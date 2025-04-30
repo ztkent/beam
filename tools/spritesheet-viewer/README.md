@@ -2,13 +2,12 @@
 
 A lightweight tool for viewing and inspecting sprite sheets with configurable grid sizes and margins.  
 
-
 ## Features
 
+- Validate settings for importing sprite sheets into Beam.
 - Load PNG and JPEG sprite sheets
 - Adjust grid size and margin settings in real-time
 - Scroll through large sprite sheets
-
 
 ## Example
 <div align="center">
