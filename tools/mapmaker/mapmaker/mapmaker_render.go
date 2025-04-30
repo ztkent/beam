@@ -1000,7 +1000,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 
 type NPCEditorState struct {
 	visible     bool
-	pos         beam.Position
+	spawnPos    beam.Position
 	name        string
 	health      string
 	attack      string
@@ -1017,6 +1017,10 @@ type NPCEditorState struct {
 	frameCountStr    string
 	animationTimeStr string
 	selectedFrames   []string
+
+	// String representations for input fields
+	spawnXStr string
+	spawnYStr string
 }
 
 func (m *MapMaker) renderNPCEditor() {
@@ -1098,6 +1102,9 @@ func (m *MapMaker) renderNPCEditor() {
 
 	// Left column - Basic attributes
 	y := startY
+
+	editor.spawnXStr = fmt.Sprintf("%d", editor.spawnPos.X)
+	editor.spawnYStr = fmt.Sprintf("%d", editor.spawnPos.Y)
 	createNPCInput("Name", &editor.name, leftX, y, false)
 	y += inputHeight + padding
 	createNPCInput("Health", &editor.health, leftX, y, true)
@@ -1109,6 +1116,10 @@ func (m *MapMaker) renderNPCEditor() {
 	createNPCInput("Attack Speed", &editor.attackSpeed, leftX, y, true)
 	y += inputHeight + padding
 	createNPCInput("Attack Range", &editor.attackRange, leftX, y, true)
+	y += inputHeight + padding
+	createNPCInput("Spawn X", &editor.spawnXStr, leftX, y, true) // Added Spawn X
+	y += inputHeight + padding
+	createNPCInput("Spawn Y", &editor.spawnYStr, leftX, y, true) // Added Spawn Y
 
 	// Right column - Movement and behavior
 	y = startY
@@ -1293,24 +1304,26 @@ func (m *MapMaker) renderNPCEditor() {
 
 			if i < len(editor.selectedFrames) && editor.selectedFrames[i] != "" {
 				info, err := m.resources.GetTexture("default", editor.selectedFrames[i])
-				if err == nil {
-					scale := float32(frameSize-10) / info.Region.Width
-					if info.Region.Height*scale > float32(frameSize-10) {
-						scale = float32(frameSize-10) / info.Region.Height
-					}
-
-					rl.DrawTexturePro(
-						info.Texture,
-						info.Region,
-						rl.Rectangle{
-							X:      frameRect.X + (frameRect.Width-info.Region.Width*scale)/2,
-							Y:      frameRect.Y + (frameRect.Height-info.Region.Height*scale)/2,
-							Width:  info.Region.Width * scale,
-							Height: info.Region.Height * scale,
-						},
-						rl.Vector2{}, 0, rl.White,
-					)
+				if err != nil {
+					fmt.Println("Error getting texture:", err)
+					continue
 				}
+				scale := float32(frameSize-10) / info.Region.Width
+				if info.Region.Height*scale > float32(frameSize-10) {
+					scale = float32(frameSize-10) / info.Region.Height
+				}
+
+				rl.DrawTexturePro(
+					info.Texture,
+					info.Region,
+					rl.Rectangle{
+						X:      frameRect.X + (frameRect.Width-info.Region.Width*scale)/2,
+						Y:      frameRect.Y + (frameRect.Height-info.Region.Height*scale)/2,
+						Width:  info.Region.Width * scale,
+						Height: info.Region.Height * scale,
+					},
+					rl.Vector2{}, 0, rl.White,
+				)
 			} else {
 				rl.DrawText("+", int32(frameRect.X+frameRect.Width/2-5),
 					int32(frameRect.Y+frameRect.Height/2-8), 16, rl.DarkGray)
@@ -1360,6 +1373,8 @@ func (m *MapMaker) renderNPCEditor() {
 		attackRange, _ := strconv.ParseFloat(editor.attackRange, 64)
 		moveSpeed, _ := strconv.ParseFloat(editor.moveSpeed, 64)
 		aggroRange, _ := strconv.Atoi(editor.aggroRange)
+		spawnX, _ := strconv.Atoi(editor.spawnXStr) // Parse Spawn X
+		spawnY, _ := strconv.Atoi(editor.spawnYStr) // Parse Spawn Y
 
 		// Create NPC data
 		npcData := beam.NPCData{
@@ -1380,18 +1395,19 @@ func (m *MapMaker) renderNPCEditor() {
 			Hostile:         editor.isHostile,
 			AggroRange:      aggroRange,
 			Attackable:      true,
+			SpawnPos:        beam.Position{X: spawnX, Y: spawnY}, // Set SpawnPos
 		}
 
 		// Validate all inputs
 		if editor.name == "" || editor.health == "" || editor.attack == "" ||
 			editor.defense == "" || editor.attackSpeed == "" || editor.attackRange == "" ||
-			editor.moveSpeed == "" || editor.aggroRange == "" {
+			editor.moveSpeed == "" || editor.aggroRange == "" || editor.spawnXStr == "" || editor.spawnYStr == "" { // Added spawn pos validation
 			rl.DrawText("Please fill in all fields.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
 			return
 		}
 		if health <= 0 || attack <= 0 || defense < 0 || attackSpeed <= 0 ||
-			attackRange <= 0 || moveSpeed <= 0 || aggroRange < 0 {
-			rl.DrawText("Values must be positive.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			attackRange <= 0 || moveSpeed <= 0 || aggroRange < 0 || spawnX < 0 || spawnY < 0 { // Added spawn pos validation
+			rl.DrawText("Values must be positive (except Defense/Aggro/Spawn).", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
 			return
 		}
 		if _, err := strconv.Atoi(editor.aggroRange); err != nil {
@@ -1410,6 +1426,14 @@ func (m *MapMaker) renderNPCEditor() {
 			rl.DrawText("Defense must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
 			return
 		}
+		if _, err := strconv.Atoi(editor.spawnXStr); err != nil { // Added spawn X validation
+			rl.DrawText("Spawn X must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+		if _, err := strconv.Atoi(editor.spawnYStr); err != nil { // Added spawn Y validation
+			rl.DrawText("Spawn Y must be an integer.", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
 		// texture for every direction
 		if len(editor.textures.Up.Frames) == 0 || len(editor.textures.Down.Frames) == 0 ||
 			len(editor.textures.Left.Frames) == 0 || len(editor.textures.Right.Frames) == 0 {
@@ -1418,10 +1442,9 @@ func (m *MapMaker) renderNPCEditor() {
 		}
 
 		// Save NPC data to the tile
-		pos := editor.pos
 		m.tileGrid.Map.NPCs = append(m.tileGrid.Map.NPCs, &beam.NPC{
-			Pos:  pos,
 			Data: npcData,
+			Pos:  npcData.SpawnPos,
 		})
 		m.closeNPCEditor()
 	}
@@ -1519,7 +1542,7 @@ func (m *MapMaker) renderNPCList() {
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			m.uiState.npcEditor = &NPCEditorState{
 				visible:          true,
-				pos:              npc.Pos,
+				spawnPos:         npc.Data.SpawnPos,
 				name:             npc.Data.Name,
 				health:           strconv.Itoa(npc.Data.Health),
 				attack:           strconv.Itoa(npc.Data.Attack),
@@ -1534,6 +1557,8 @@ func (m *MapMaker) renderNPCList() {
 				frameCountStr:    "1",
 				animationTimeStr: "0.5",
 				selectedFrames:   make([]string, 1),
+				spawnXStr:        strconv.Itoa(npc.Data.SpawnPos.X), // Initialize spawnXStr
+				spawnYStr:        strconv.Itoa(npc.Data.SpawnPos.Y), // Initialize spawnYStr
 			}
 			// Remove the old NPC before editing
 			m.tileGrid.NPCs = append(m.tileGrid.NPCs[:i], m.tileGrid.NPCs[i+1:]...)

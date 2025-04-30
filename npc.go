@@ -24,8 +24,9 @@ type NPC struct {
 }
 
 type NPCData struct {
-	Name    string
-	Texture *NPCTexture
+	Name     string
+	Texture  *NPCTexture
+	SpawnPos Position
 
 	Health           int
 	MaxHealth        int
