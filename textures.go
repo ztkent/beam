@@ -13,12 +13,26 @@ type Texture struct {
 	Tint     rl.Color
 }
 
+// Layers for rendering -
+// These layers are used to determine the order in which textures are rendered.
+// Tiles on the same layer are render top down, left to right.
+type Layer int
+
+const (
+	BackgroundLayer Layer = iota
+	NPCLayer
+	UserLayer
+	ForegroundLayer
+)
+
 type AnimatedTexture struct {
 	Frames []Texture
 
 	IsAnimated    bool
 	AnimationTime float64
 	CurrentFrame  int
+	Layer         Layer
+
 	lastFrameTime float64
 }
 
