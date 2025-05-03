@@ -24,6 +24,19 @@ const (
 	ForegroundLayer
 )
 
+func (l Layer) String() string {
+	switch l {
+	case BaseLayer:
+		return "Base Layer"
+	case BackgroundLayer:
+		return "Background Layer"
+	case ForegroundLayer:
+		return "Foreground Layer"
+	default:
+		return "Unknown Layer"
+	}
+}
+
 type AnimatedTexture struct {
 	Frames []Texture
 

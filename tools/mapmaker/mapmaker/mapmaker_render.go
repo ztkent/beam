@@ -929,6 +929,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 				m.uiState.activeInput = ""
 			} else {
 				// Use simple editor for non-complex textures
+				editor.layer = tex.Layer
 				if len(tex.Frames) > 0 {
 					firstFrame := tex.Frames[0]
 					editor.rotation = fmt.Sprintf("%.1f", firstFrame.Rotation)
@@ -1590,6 +1591,7 @@ type TextureEditorState struct {
 	tintB         string
 	tintA         string
 	clearedInputs map[string]bool
+	layer         beam.Layer
 
 	// Advanced Editor State
 	advAnimationTimeStr    string
@@ -1608,7 +1610,7 @@ func (m *MapMaker) renderTextureEditor() {
 	}
 
 	dialogWidth := 300
-	dialogHeight := 350
+	dialogHeight := 400
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
@@ -1645,7 +1647,8 @@ func (m *MapMaker) renderTextureEditor() {
 		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
 
 		// Handle input focus and text input
-		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) &&
+			m.uiState.activeInput != "layer_dropdown" {
 			m.uiState.activeInput = label
 		}
 		if m.uiState.activeInput == label {
@@ -1670,6 +1673,10 @@ func (m *MapMaker) renderTextureEditor() {
 		}
 	}
 
+	// Set the layer dropdown
+	layerY := y
+	y += inputHeight + padding
+
 	// Create all input fields
 	createInput("Rotation", &editor.rotation, y)
 	y += inputHeight + padding
@@ -1680,7 +1687,10 @@ func (m *MapMaker) renderTextureEditor() {
 	createInput("Offset Y", &editor.offsetY, y)
 	y += inputHeight + padding
 
-	// Consolidated tint inputs
+	// Draw layer dropdown
+	m.renderLayerDropdown(dialogX, padding, layerY, labelWidth, inputWidth+55, inputHeight, editor)
+
+	// Continue with tint inputs
 	tintLabel := "Tint RGBA:"
 	rl.DrawText(tintLabel, int32(dialogX+padding)-10, int32(y+8), 16, rl.Black)
 
@@ -1774,8 +1784,12 @@ func (m *MapMaker) renderTextureEditor() {
 		// Update all selected tiles with new values
 		for _, pos := range m.uiState.tileInfoPos {
 			tile := &m.tileGrid.Tiles[pos.Y][pos.X]
+
 			if editor.texIndex < len(tile.Textures) && editor.frameIndex < len(tile.Textures[editor.texIndex].Frames) {
-				frame := &tile.Textures[editor.texIndex].Frames[editor.frameIndex]
+				currTexture := tile.Textures[editor.texIndex]
+				currTexture.Layer = editor.layer
+
+				frame := &currTexture.Frames[editor.frameIndex]
 				frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
 				frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
 				frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
@@ -1811,6 +1825,73 @@ func (m *MapMaker) renderTextureEditor() {
 	}
 	if m.uiState.showAdvancedEditor {
 		m.renderAdvancedEditor()
+	}
+}
+
+func (m *MapMaker) renderLayerDropdown(dialogX int, padding int, y int, labelWidth int, inputWidth int, inputHeight int, editor *TextureEditorState) {
+	rl.DrawText("Layer", int32(dialogX+padding), int32(y+8), 16, rl.Black)
+	dropdownRect := rl.Rectangle{
+		X:      float32(dialogX + padding + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputWidth),
+		Height: float32(inputHeight),
+	}
+
+	// Draw dropdown button
+	rl.DrawRectangleRec(dropdownRect, rl.LightGray)
+	rl.DrawRectangleLinesEx(dropdownRect, 1, rl.Gray)
+	layerText := editor.layer.String()
+	if layerText == "" {
+		layerText = "Background" // Default value
+	}
+	rl.DrawText(layerText, int32(dropdownRect.X+5), int32(dropdownRect.Y+8), 16, rl.Black)
+
+	// Draw dropdown arrow
+	arrowSize := int32(8)
+	rl.DrawTriangle(
+		rl.Vector2{X: float32(dropdownRect.X + dropdownRect.Width - 15), Y: float32(dropdownRect.Y + 12)},
+		rl.Vector2{X: float32(dropdownRect.X + dropdownRect.Width - 15 - float32(arrowSize)), Y: float32(dropdownRect.Y + 12)},
+		rl.Vector2{X: float32(dropdownRect.X + dropdownRect.Width - 15 - float32(arrowSize/2)), Y: float32(dropdownRect.Y + 12 + float32(arrowSize))},
+		rl.DarkGray,
+	)
+
+	// Handle dropdown click
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), dropdownRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.activeInput = "layer_dropdown"
+	}
+
+	// Show dropdown list if active
+	if m.uiState.activeInput == "layer_dropdown" {
+		layers := []beam.Layer{beam.BaseLayer, beam.BackgroundLayer, beam.ForegroundLayer}
+		listRect := rl.Rectangle{
+			X:      dropdownRect.X,
+			Y:      dropdownRect.Y + dropdownRect.Height,
+			Width:  dropdownRect.Width,
+			Height: float32(len(layers) * inputHeight),
+		}
+
+		rl.DrawRectangleRec(listRect, rl.White)
+		rl.DrawRectangleLinesEx(listRect, 1, rl.Gray)
+
+		for i, layer := range layers {
+			itemRect := rl.Rectangle{
+				X:      listRect.X,
+				Y:      listRect.Y + float32(i*inputHeight),
+				Width:  listRect.Width,
+				Height: float32(inputHeight),
+			}
+
+			// Highlight on hover
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), itemRect) {
+				rl.DrawRectangleRec(itemRect, rl.LightGray)
+				if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+					editor.layer = layer
+					m.uiState.activeInput = ""
+				}
+			}
+
+			rl.DrawText(layer.String(), int32(itemRect.X+5), int32(itemRect.Y+8), 16, rl.Black)
+		}
 	}
 }
 
@@ -2023,11 +2104,11 @@ func (m *MapMaker) renderAdvancedEditor() {
 		// Handle click to select texture for this frame
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			editor.advSelectingFrameIndex = i
-			m.showResourceViewer = true // Open resource viewer to select texture
-			m.uiState.activeInput = ""  // Deactivate text inputs
+			m.showResourceViewer = true
 		}
 	}
 
+	// Save/Cancel buttons
 	saveBtnAdv := rl.Rectangle{
 		X:      float32(dialogX + dialogWidth/2 - 40),
 		Y:      float32(dialogY + dialogHeight - 40),
