@@ -14,14 +14,13 @@ type Texture struct {
 }
 
 // Layers for rendering -
-// These layers are used to determine the order in which textures are rendered.
+// Used to determine the order in which textures are rendered.
 // Tiles on the same layer are render top down, left to right.
 type Layer int
 
 const (
-	BackgroundLayer Layer = iota
-	NPCLayer
-	UserLayer
+	BaseLayer Layer = iota
+	BackgroundLayer
 	ForegroundLayer
 )
 
