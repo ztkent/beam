@@ -3,8 +3,6 @@
 ## Map Maker
 
 - fix editing npcs
-  - replace animation tiles after one has been picked
   - fix the animation time var not saving
-  - add the mage npc
 
 - item tiles. that way we can keep the textures, tiles, and items separate.

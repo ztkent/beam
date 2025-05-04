@@ -1089,11 +1089,12 @@ type NPCEditorState struct {
 	aggroRange  string
 
 	// Texture editing state
-	editingDirection beam.Direction
-	textures         *beam.NPCTexture
-	frameCountStr    string
-	animationTimeStr string
-	selectedFrames   []string
+	editingDirection       beam.Direction
+	textures               *beam.NPCTexture
+	frameCountStr          string
+	animationTimeStr       string
+	selectedFrames         []string
+	advSelectingFrameIndex int
 
 	// String representations for input fields
 	spawnXStr string
@@ -1407,11 +1408,8 @@ func (m *MapMaker) renderNPCEditor() {
 			}
 
 			if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				m.uiState.npcEditor.advSelectingFrameIndex = i
 				m.showResourceViewer = true
-				// m.uiState.textureEditor = &TextureEditorState{
-				// 	visible:                false,
-				// 	advSelectingFrameIndex: i,
-				// }
 			}
 		}
 	}
@@ -1706,7 +1704,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	// Input fields
 	y := dialogY + 50
-	padding := 10
+	padding := 20
 	labelWidth := 80
 	inputWidth := 100
 	inputHeight := 30
@@ -1771,7 +1769,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	// Continue with tint inputs
 	tintLabel := "Tint RGBA:"
-	rl.DrawText(tintLabel, int32(dialogX+padding)-5, int32(y+8), 16, rl.Black)
+	rl.DrawText(tintLabel, int32(dialogX+padding)-10, int32(y+8), 16, rl.Black)
 
 	tintWidth := 45
 	tintSpacing := 5

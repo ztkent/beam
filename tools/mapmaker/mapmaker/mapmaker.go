@@ -1047,7 +1047,8 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 	if m.uiState.npcEditor != nil && m.uiState.npcEditor.visible {
 		editor := m.uiState.npcEditor
 		frameCount, _ := strconv.Atoi(editor.frameCountStr)
-		if frameCount > 0 {
+		if frameCount > 0 && editor.advSelectingFrameIndex >= 0 {
+			selectedFrame := editor.advSelectingFrameIndex
 			// Get the current direction's texture
 			var currentTex *beam.AnimatedTexture
 			switch editor.editingDirection {
@@ -1061,22 +1062,20 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 				currentTex = editor.textures.Right
 			}
 
-			// Find first empty frame slot and fill it
-			for i := 0; i < frameCount; i++ {
-				if i >= len(editor.selectedFrames) || editor.selectedFrames[i] == "" {
-					editor.selectedFrames[i] = texInfo.Name
+			// Update just the selected frame
+			if selectedFrame < len(editor.selectedFrames) {
+				editor.selectedFrames[selectedFrame] = texInfo.Name
 
-					// Update the texture frames
+				// Ensure frames array is large enough
+				if len(currentTex.Frames) < frameCount {
 					currentTex.Frames = make([]beam.Texture, frameCount)
-					for j := 0; j < frameCount; j++ {
-						if j < len(editor.selectedFrames) && editor.selectedFrames[j] != "" {
-							currentTex.Frames[j] = beam.Texture{Name: editor.selectedFrames[j]}
-						}
-					}
-					break
 				}
+
+				// Update the specific frame
+				currentTex.Frames[selectedFrame] = beam.Texture{Name: texInfo.Name}
 			}
 		}
+		editor.advSelectingFrameIndex = -1 // Reset selection index
 		m.showResourceViewer = false
 		return
 	}
