@@ -57,16 +57,16 @@ type NPCData struct {
 func NewSimpleNPCTexture(name string) *NPCTexture {
 	return &NPCTexture{
 		Up: &AnimatedTexture{
-			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+			Frames: []Texture{{Name: name, Rotation: 0, ScaleX: 1, ScaleY: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
 		},
 		Down: &AnimatedTexture{
-			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+			Frames: []Texture{{Name: name, Rotation: 0, ScaleX: 1, ScaleY: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
 		},
 		Left: &AnimatedTexture{
-			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+			Frames: []Texture{{Name: name, Rotation: 0, ScaleX: 1, ScaleY: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
 		},
 		Right: &AnimatedTexture{
-			Frames: []Texture{{Name: name, Rotation: 0, Scale: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
+			Frames: []Texture{{Name: name, Rotation: 0, ScaleX: 1, ScaleY: 1, OffsetX: 0, OffsetY: 0, Tint: rl.White}},
 		},
 	}
 }

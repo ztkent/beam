@@ -29,7 +29,8 @@ func NewSimpleTileTexture(name string) *AnimatedTexture {
 			{
 				Name:     name,
 				Rotation: 0,
-				Scale:    1,
+				ScaleX:   1,
+				ScaleY:   1,
 				OffsetX:  0,
 				OffsetY:  0,
 				Tint:     rl.White,

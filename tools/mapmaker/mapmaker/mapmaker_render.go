@@ -39,34 +39,36 @@ func (m *MapMaker) renderGrid() {
 	}
 
 	// Draw grid tiles within viewport
-	for y := viewStartY; y < viewEndY; y++ {
-		for x := viewStartX; x < viewEndX; x++ {
-			// Calculate screen position for this tile
-			screenX := startX + (x-viewStartX)*m.uiState.tileSize
-			screenY := startY + (y-viewStartY)*m.uiState.tileSize
+	for _, layer := range beam.OrderedLayers() {
+		for y := viewStartY; y < viewEndY; y++ {
+			for x := viewStartX; x < viewEndX; x++ {
+				// Calculate screen position for this tile
+				screenX := startX + (x-viewStartX)*m.uiState.tileSize
+				screenY := startY + (y-viewStartY)*m.uiState.tileSize
 
-			pos := rl.Rectangle{
-				X:      float32(screenX),
-				Y:      float32(screenY),
-				Width:  float32(m.uiState.tileSize),
-				Height: float32(m.uiState.tileSize),
-			}
+				pos := rl.Rectangle{
+					X:      float32(screenX),
+					Y:      float32(screenY),
+					Width:  float32(m.uiState.tileSize),
+					Height: float32(m.uiState.tileSize),
+				}
 
-			// Render tile at this location
-			tile := m.tileGrid.Tiles[y][x]
-			m.renderGridTile(pos, beam.Position{X: x, Y: y}, tile)
+				// Render tile at this location
+				tile := m.tileGrid.Tiles[y][x]
+				m.renderGridTile(pos, beam.Position{X: x, Y: y}, tile, layer)
 
-			// Draw any NPC's on the map
-			for _, npc := range m.tileGrid.NPCs {
-				if npc.Pos.X == x && npc.Pos.Y == y {
-					npcX := startX + (x-viewStartX)*m.uiState.tileSize
-					npcY := startY + (y-viewStartY)*m.uiState.tileSize
-					m.resources.RenderNPC(npc, rl.Rectangle{
-						X:      float32(npcX),
-						Y:      float32(npcY),
-						Width:  float32(m.uiState.tileSize),
-						Height: float32(m.uiState.tileSize),
-					}, m.uiState.tileSize)
+				// Draw any NPC's on the map
+				for _, npc := range m.tileGrid.NPCs {
+					if npc.Pos.X == x && npc.Pos.Y == y {
+						npcX := startX + (x-viewStartX)*m.uiState.tileSize
+						npcY := startY + (y-viewStartY)*m.uiState.tileSize
+						m.resources.RenderNPC(npc, rl.Rectangle{
+							X:      float32(npcX),
+							Y:      float32(npcY),
+							Width:  float32(m.uiState.tileSize),
+							Height: float32(m.uiState.tileSize),
+						}, m.uiState.tileSize)
+					}
 				}
 			}
 		}
@@ -211,13 +213,15 @@ func (m *MapMaker) renderViewportControls() {
 	}
 }
 
-func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile beam.Tile) {
+func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile beam.Tile, layer beam.Layer) {
 	if len(tile.Textures) == 0 {
 		return
 	}
 
 	for _, tex := range tile.Textures {
 		if len(tex.Frames) == 0 {
+			continue
+		} else if tex.Layer != layer {
 			continue
 		}
 
@@ -248,8 +252,8 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 				destRect := rl.Rectangle{
 					X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(m.uiState.tileSize)),
 					Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(m.uiState.tileSize)),
-					Width:  pos.Width * float32(frame.Scale),
-					Height: pos.Height * float32(frame.Scale),
+					Width:  pos.Width * float32(frame.ScaleX),
+					Height: pos.Height * float32(frame.ScaleY),
 				}
 
 				// Add the tint
@@ -281,8 +285,8 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 			destRect := rl.Rectangle{
 				X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(m.uiState.tileSize)),
 				Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(m.uiState.tileSize)),
-				Width:  pos.Width * float32(frame.Scale),
-				Height: pos.Height * float32(frame.Scale),
+				Width:  pos.Width * float32(frame.ScaleX),
+				Height: pos.Height * float32(frame.ScaleY),
 			}
 			rl.DrawTexturePro(
 				info.Texture,
@@ -980,7 +984,8 @@ func (m *MapMaker) renderTileInfoPopup() {
 				if len(tex.Frames) > 0 {
 					firstFrame := tex.Frames[0]
 					editor.rotation = fmt.Sprintf("%.1f", firstFrame.Rotation)
-					editor.scale = fmt.Sprintf("%.2f", firstFrame.Scale)
+					editor.scalex = fmt.Sprintf("%.2f", firstFrame.ScaleX)
+					editor.scaley = fmt.Sprintf("%.2f", firstFrame.ScaleY)
 					editor.offsetX = fmt.Sprintf("%.2f", firstFrame.OffsetX)
 					editor.offsetY = fmt.Sprintf("%.2f", firstFrame.OffsetY)
 					editor.tintR = fmt.Sprintf("%d", firstFrame.Tint.R)
@@ -989,7 +994,8 @@ func (m *MapMaker) renderTileInfoPopup() {
 					editor.tintA = fmt.Sprintf("%d", firstFrame.Tint.A)
 				} else {
 					editor.rotation = "0.0"
-					editor.scale = "1.0"
+					editor.scalex = "1.0"
+					editor.scaley = "1.0"
 					editor.offsetX = "0.0"
 					editor.offsetY = "0.0"
 					editor.tintR = "255"
@@ -1012,7 +1018,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 			}
 
 			rl.DrawText(fmt.Sprintf("  - %s (%.1f°) Scale: %.2f Offset: (%.2f, %.2f)",
-				frame.Name, frame.Rotation, frame.Scale, frame.OffsetX, frame.OffsetY),
+				frame.Name, frame.Rotation, frame.ScaleX, frame.OffsetX, frame.OffsetY),
 				m.uiState.tileInfoPopupX+padding+5, textY, 12, textColor)
 			textY += 15
 
@@ -1653,7 +1659,8 @@ type TextureEditorState struct {
 	texIndex      int
 	frameIndex    int
 	rotation      string
-	scale         string
+	scalex        string
+	scaley        string
 	offsetX       string
 	offsetY       string
 	tintR         string
@@ -1699,7 +1706,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	// Input fields
 	y := dialogY + 50
-	padding := 20
+	padding := 10
 	labelWidth := 80
 	inputWidth := 100
 	inputHeight := 30
@@ -1750,7 +1757,9 @@ func (m *MapMaker) renderTextureEditor() {
 	// Create all input fields
 	createInput("Rotation", &editor.rotation, y)
 	y += inputHeight + padding
-	createInput("Scale", &editor.scale, y)
+	createInput("Scale X", &editor.scalex, y)
+	y += inputHeight + padding
+	createInput("Scale Y", &editor.scaley, y)
 	y += inputHeight + padding
 	createInput("Offset X", &editor.offsetX, y)
 	y += inputHeight + padding
@@ -1762,7 +1771,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	// Continue with tint inputs
 	tintLabel := "Tint RGBA:"
-	rl.DrawText(tintLabel, int32(dialogX+padding)-10, int32(y+8), 16, rl.Black)
+	rl.DrawText(tintLabel, int32(dialogX+padding)-5, int32(y+8), 16, rl.Black)
 
 	tintWidth := 45
 	tintSpacing := 5
@@ -1861,7 +1870,8 @@ func (m *MapMaker) renderTextureEditor() {
 
 				frame := &currTexture.Frames[editor.frameIndex]
 				frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
-				frame.Scale, _ = strconv.ParseFloat(editor.scale, 64)
+				frame.ScaleX, _ = strconv.ParseFloat(editor.scalex, 64)
+				frame.ScaleY, _ = strconv.ParseFloat(editor.scaley, 64)
 				frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
 				frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
 				r, _ := strconv.Atoi(editor.tintR)
@@ -2232,7 +2242,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 					if len(tile.Textures[editor.texIndex].Frames) > 0 {
 						originalFrame := tile.Textures[editor.texIndex].Frames[0]
 						originalRotation = originalFrame.Rotation
-						originalScale = originalFrame.Scale
+						originalScale = originalFrame.ScaleX
 						originalOffsetX = originalFrame.OffsetX
 						originalOffsetY = originalFrame.OffsetY
 						originalTint = originalFrame.Tint
@@ -2247,7 +2257,8 @@ func (m *MapMaker) renderAdvancedEditor() {
 						newFrame := beam.Texture{
 							Name:     editor.advSelectedFrames[i],
 							Rotation: originalRotation,
-							Scale:    originalScale,
+							ScaleX:   originalScale,
+							ScaleY:   originalScale,
 							OffsetX:  originalOffsetX,
 							OffsetY:  originalOffsetY,
 							Tint:     originalTint,

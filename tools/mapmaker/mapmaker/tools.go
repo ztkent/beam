@@ -143,7 +143,8 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 					sourceFrame := sourceTex.Frames[j]
 					if frame.Name != sourceFrame.Name ||
 						frame.Rotation != sourceFrame.Rotation ||
-						frame.Scale != sourceFrame.Scale ||
+						frame.ScaleX != sourceFrame.ScaleX ||
+						frame.ScaleY != sourceFrame.ScaleY ||
 						frame.OffsetX != sourceFrame.OffsetX ||
 						frame.OffsetY != sourceFrame.OffsetY ||
 						frame.Tint != sourceFrame.Tint {
@@ -159,7 +160,8 @@ func (m *MapMaker) floodFillSelection(startX, startY int) beam.Positions {
 				sourceFrame := sourceTex.Frames[0]
 				if frame.Name != sourceFrame.Name ||
 					frame.Rotation != sourceFrame.Rotation ||
-					frame.Scale != sourceFrame.Scale ||
+					frame.ScaleX != sourceFrame.ScaleX ||
+					frame.ScaleY != sourceFrame.ScaleY ||
 					frame.OffsetX != sourceFrame.OffsetX ||
 					frame.OffsetY != sourceFrame.OffsetY ||
 					frame.Tint != sourceFrame.Tint {

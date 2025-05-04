@@ -7,7 +7,8 @@ import (
 type Texture struct {
 	Name     string
 	Rotation float64
-	Scale    float64
+	ScaleX   float64
+	ScaleY   float64
 	OffsetX  float64
 	OffsetY  float64
 	Tint     rl.Color
@@ -37,6 +38,14 @@ func (l Layer) String() string {
 	}
 }
 
+func OrderedLayers() []Layer {
+	return []Layer{
+		BackgroundLayer,
+		BaseLayer,
+		ForegroundLayer,
+	}
+}
+
 type AnimatedTexture struct {
 	Frames []Texture
 
@@ -50,7 +59,7 @@ type AnimatedTexture struct {
 
 func (t *AnimatedTexture) GetCurrentFrame(currentTime float64) Texture {
 	if len(t.Frames) == 0 {
-		return Texture{Scale: 1.0, Tint: rl.White}
+		return Texture{ScaleX: 1.0, ScaleY: 1.0, Tint: rl.White}
 	}
 	if t.IsAnimated {
 		if len(t.Frames) > 1 {

@@ -27,8 +27,8 @@ func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.R
 			destRect := rl.Rectangle{
 				X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(tileSize)),
 				Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(tileSize)),
-				Width:  pos.Width * float32(frame.Scale),
-				Height: pos.Height * float32(frame.Scale),
+				Width:  pos.Width * float32(frame.ScaleX),
+				Height: pos.Height * float32(frame.ScaleY),
 			}
 			if frame.Tint == (rl.Color{}) {
 				frame.Tint = rl.White
@@ -58,8 +58,8 @@ func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.R
 		destRect := rl.Rectangle{
 			X:      pos.X + pos.Width/2 + float32(frame.OffsetX*float64(tileSize)),
 			Y:      pos.Y + pos.Height/2 + float32(frame.OffsetY*float64(tileSize)),
-			Width:  pos.Width * float32(frame.Scale),
-			Height: pos.Height * float32(frame.Scale),
+			Width:  pos.Width * float32(frame.ScaleX),
+			Height: pos.Height * float32(frame.ScaleY),
 		}
 		if frame.Tint == (rl.Color{}) {
 			frame.Tint = rl.White
@@ -86,7 +86,8 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 				{
 					Name:     npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name,
 					Rotation: 0,
-					Scale:    1,
+					ScaleX:   1,
+					ScaleY:   1,
 					OffsetX:  0,
 					OffsetY:  0,
 					Tint:     fadeColor,
@@ -112,7 +113,8 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 				{
 					Name:     npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name,
 					Rotation: 0,
-					Scale:    1,
+					ScaleX:   1,
+					ScaleY:   1,
 					OffsetX:  0,
 					OffsetY:  0,
 					Tint:     damageColor,
