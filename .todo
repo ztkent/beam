@@ -2,8 +2,9 @@
 
 ## Map Maker
 
-- placing large textures gets weird, since the tile below them are rendered on top of them.
-- we need a way to mark that some textures need to be rendered on another pass.
-  - probably default pass, then go through and render anything marked. we can mark them with an int, so we can have rendering layers.
+- fix editing npcs
+  - replace animation tiles after one has been picked
+  - fix the animation time var not saving
+  - add the mage npc
 
 - item tiles. that way we can keep the textures, tiles, and items separate.

@@ -301,8 +301,8 @@ func (s *UIState) RenderUI(cfg Config, showSettings *bool) {
 			Height: inputHeight,
 		}
 
-		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 10)
-		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 64)
+		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 24)
+		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 128)
 
 		helpText := "Use Up/Down keys when selected"
 		helpWidth := rl.MeasureText(helpText, 10)
@@ -398,8 +398,8 @@ func (s *UIState) RenderViewerUI(cfg Config, showSettings *bool) error {
 			Height: inputHeight,
 		}
 
-		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 10)
-		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 64)
+		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 24)
+		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 128)
 
 		helpText := "Use Up/Down keys when selected"
 		helpWidth := rl.MeasureText(helpText, 10)

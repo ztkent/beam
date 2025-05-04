@@ -120,6 +120,7 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 					Tint:     damageColor,
 				},
 			},
+			Layer:      npc.GetCurrentTexture().Layer,
 			IsAnimated: false,
 		}, pos, tileSize)
 
