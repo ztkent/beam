@@ -856,6 +856,44 @@ func (m *MapMaker) renderTileInfoPopup() {
 		m.uiState.tileInfoPopupY = 0
 	}
 
+	// Calculate total content height first
+	var totalHeight int32 = 60
+	tempTile := m.tileGrid.Tiles[m.uiState.tileInfoPos[0].Y][m.uiState.tileInfoPos[0].X]
+	for _, tex := range tempTile.Textures {
+		totalHeight += 35
+		for range tex.Frames {
+			totalHeight += 55
+		}
+	}
+
+	// Add scroll state if it doesn't exist
+	if m.uiState.tileInfoScrollY == 0 {
+		m.uiState.tileInfoScrollY = 0
+	}
+
+	// Handle mouse wheel for scrolling
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), rl.Rectangle{
+		X:      float32(m.uiState.tileInfoPopupX),
+		Y:      float32(m.uiState.tileInfoPopupY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}) {
+		wheel := rl.GetMouseWheelMove()
+		m.uiState.tileInfoScrollY -= int32(wheel * 20)
+	}
+
+	// Clamp scroll value
+	maxScroll := totalHeight - int32(dialogHeight) + 40
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if m.uiState.tileInfoScrollY < 0 {
+		m.uiState.tileInfoScrollY = 0
+	}
+	if m.uiState.tileInfoScrollY > maxScroll {
+		m.uiState.tileInfoScrollY = maxScroll
+	}
+
 	// Draw popup background
 	rl.DrawRectangle(m.uiState.tileInfoPopupX, m.uiState.tileInfoPopupY, int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
 	rl.DrawRectangleLinesEx(rl.Rectangle{
@@ -865,9 +903,18 @@ func (m *MapMaker) renderTileInfoPopup() {
 		Height: float32(dialogHeight),
 	}, 1, rl.Gray)
 
+	// Begin scissor mode for content clipping
+	rl.BeginScissorMode(
+		m.uiState.tileInfoPopupX,
+		m.uiState.tileInfoPopupY+30,
+		int32(dialogWidth),
+		int32(dialogHeight)-40,
+	)
+
 	// Draw content
 	padding := int32(10)
-	textY := m.uiState.tileInfoPopupY + padding
+	// Adjust initial Y position by scroll offset
+	textY := m.uiState.tileInfoPopupY + padding - m.uiState.tileInfoScrollY
 
 	// Draw tile type
 	tile := m.tileGrid.Tiles[m.uiState.tileInfoPos[0].Y][m.uiState.tileInfoPos[0].X]
@@ -973,9 +1020,32 @@ func (m *MapMaker) renderTileInfoPopup() {
 			rl.DrawText(fmt.Sprintf("    Tint: R:%d G:%d B:%d A:%d%s",
 				frame.Tint.R, frame.Tint.G, frame.Tint.B, frame.Tint.A, warningText),
 				m.uiState.tileInfoPopupX+padding+5, textY, 12, textColor)
+			textY += 15
+
+			// Add layer information
+			rl.DrawText(fmt.Sprintf("Layer: %s", tex.Layer.String()),
+				m.uiState.tileInfoPopupX+padding+25, textY, 12, textColor)
 			textY += 25
 		}
 	}
+
+	rl.EndScissorMode()
+
+	// Draw scroll indicators if needed
+	if maxScroll > 0 {
+		scrollPct := float32(m.uiState.tileInfoScrollY) / float32(maxScroll)
+		scrollBarHeight := float32(dialogHeight-40) * (float32(dialogHeight-40) / float32(totalHeight))
+		scrollBarY := float32(m.uiState.tileInfoPopupY+30) + scrollPct*float32(int32(dialogHeight)-40-int32(scrollBarHeight))
+
+		// Draw scroll bar
+		rl.DrawRectangle(
+			m.uiState.tileInfoPopupX+int32(dialogWidth)-8,
+			int32(scrollBarY),
+			5,
+			int32(scrollBarHeight),
+			rl.Gray)
+	}
+
 	// Draw close button with corrected position
 	closeBtn := rl.Rectangle{
 		X:      float32(m.uiState.tileInfoPopupX + int32(dialogWidth) - 30),

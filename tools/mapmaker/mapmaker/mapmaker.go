@@ -49,6 +49,7 @@ type UIState struct {
 	tileInfoPopupX  int32
 	tileInfoPopupY  int32
 	isDraggingPopup bool
+	tileInfoScrollY int32
 
 	// Recent Textures
 	recentTextures []string
