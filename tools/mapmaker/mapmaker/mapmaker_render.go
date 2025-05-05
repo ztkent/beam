@@ -2287,6 +2287,103 @@ func (m *MapMaker) renderAdvancedEditor() {
 		}
 	}
 
+	// Display frame settings when a frame is selected
+	if editor.selectedFrameIndex >= 0 && editor.selectedFrameIndex < len(editor.advSelectedFrames) {
+		settingsY := contentY + ((frameCount+framesPerRow-1)/framesPerRow)*(framePreviewSize+framePadding) + padding*2
+
+		// Frame settings title
+		rl.DrawText(fmt.Sprintf("Frame %d Settings:", editor.selectedFrameIndex+1),
+			int32(dialogX+padding), int32(settingsY), 16, rl.Black)
+		settingsY += 25
+
+		// Get original frame settings if they exist
+		var currFrame *beam.Texture
+		if editor.texIndex < len(editor.tile.Textures) {
+			tex := editor.tile.Textures[editor.texIndex]
+			if editor.selectedFrameIndex < len(tex.Frames) {
+				currFrame = &tex.Frames[editor.selectedFrameIndex]
+			}
+		}
+
+		// Settings grid layout
+		settingsPerRow := 2
+		settingWidth := (dialogWidth - padding*3) / settingsPerRow
+		settingHeight := 25
+
+		// Helper to draw setting value
+		drawSetting := func(label string, value string, col, row int) {
+			x := dialogX + padding + col*settingWidth
+			y := int32(settingsY) + int32(row*settingHeight)
+			rl.DrawText(fmt.Sprintf("%s: %s", label, value), int32(x), y, 14, rl.DarkGray)
+		}
+
+		// Draw current settings
+		if currFrame != nil {
+			drawSetting("Rotation", fmt.Sprintf("%.1f°", currFrame.Rotation), 1, 3)
+			drawSetting("Scale X", fmt.Sprintf("%.2f", currFrame.ScaleX), 0, 0)
+			drawSetting("Scale Y", fmt.Sprintf("%.2f", currFrame.ScaleY), 1, 0)
+			drawSetting("Offset X", fmt.Sprintf("%.2f", currFrame.OffsetX), 0, 1)
+			drawSetting("Offset Y", fmt.Sprintf("%.2f", currFrame.OffsetY), 1, 1)
+			drawSetting("Mirror X", fmt.Sprintf("%v", currFrame.MirrorX), 0, 2)
+			drawSetting("Mirror Y", fmt.Sprintf("%v", currFrame.MirrorY), 1, 2)
+			drawSetting("Tint", fmt.Sprintf("R:%d G:%d B:%d A:%d",
+				currFrame.Tint.R, currFrame.Tint.G, currFrame.Tint.B, currFrame.Tint.A), 0, 3)
+		} else {
+			// Show default values for new frames
+			drawSetting("Rotation", "0.0°", 1, 3)
+			drawSetting("Scale X", "1.00", 0, 0)
+			drawSetting("Scale Y", "1.00", 1, 0)
+			drawSetting("Offset X", "0.00", 0, 1)
+			drawSetting("Offset Y", "0.00", 1, 1)
+			drawSetting("Mirror X", "false", 0, 2)
+			drawSetting("Mirror Y", "false", 1, 2)
+			drawSetting("Tint", "R:255 G:255 B:255 A:255", 0, 3)
+		}
+
+		// Add an edit button
+		editBtn := rl.Rectangle{
+			X:      float32(dialogX + dialogWidth - 100),
+			Y:      float32(settingsY),
+			Width:  90,
+			Height: 25,
+		}
+		rl.DrawRectangleRec(editBtn, rl.Blue)
+		rl.DrawText("Edit Frame", int32(editBtn.X+10), int32(editBtn.Y+5), 14, rl.White)
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			// Initialize simple editor with current frame values
+			if currFrame != nil {
+				editor.rotation = fmt.Sprintf("%.1f", currFrame.Rotation)
+				editor.scalex = fmt.Sprintf("%.2f", currFrame.ScaleX)
+				editor.scaley = fmt.Sprintf("%.2f", currFrame.ScaleY)
+				editor.offsetX = fmt.Sprintf("%.2f", currFrame.OffsetX)
+				editor.offsetY = fmt.Sprintf("%.2f", currFrame.OffsetY)
+				editor.mirrorX = currFrame.MirrorX
+				editor.mirrorY = currFrame.MirrorY
+				editor.tintR = fmt.Sprintf("%d", currFrame.Tint.R)
+				editor.tintG = fmt.Sprintf("%d", currFrame.Tint.G)
+				editor.tintB = fmt.Sprintf("%d", currFrame.Tint.B)
+				editor.tintA = fmt.Sprintf("%d", currFrame.Tint.A)
+			} else {
+				// Set default values
+				editor.rotation = "0.0"
+				editor.scalex = "1.0"
+				editor.scaley = "1.0"
+				editor.offsetX = "0.0"
+				editor.offsetY = "0.0"
+				editor.tintR = "255"
+				editor.tintG = "255"
+				editor.tintB = "255"
+				editor.tintA = "255"
+				editor.mirrorX = false
+				editor.mirrorY = false
+			}
+			editor.frameIndex = editor.selectedFrameIndex
+			m.uiState.showAdvancedEditor = false
+			editor.visible = true
+		}
+	}
+
 	// Save/Cancel buttons
 	saveBtnAdv := rl.Rectangle{
 		X:      float32(dialogX + dialogWidth/2 - 40),
@@ -2338,6 +2435,8 @@ func (m *MapMaker) renderAdvancedEditor() {
 					originalOffsetX := 0.0
 					originalOffsetY := 0.0
 					originalTint := rl.White
+					originalMirrorX := false
+					originalMirrorY := false
 					if len(tile.Textures[editor.texIndex].Frames) > 0 {
 						originalFrame := tile.Textures[editor.texIndex].Frames[0]
 						originalRotation = originalFrame.Rotation
@@ -2345,6 +2444,8 @@ func (m *MapMaker) renderAdvancedEditor() {
 						originalOffsetX = originalFrame.OffsetX
 						originalOffsetY = originalFrame.OffsetY
 						originalTint = originalFrame.Tint
+						originalMirrorY = originalFrame.MirrorY
+						originalMirrorX = originalFrame.MirrorX
 					}
 
 					tex.IsAnimated = frameCount > 1
@@ -2361,6 +2462,8 @@ func (m *MapMaker) renderAdvancedEditor() {
 							OffsetX:  originalOffsetX,
 							OffsetY:  originalOffsetY,
 							Tint:     originalTint,
+							MirrorX:  originalMirrorX,
+							MirrorY:  originalMirrorY,
 						}
 						tex.Frames = append(tex.Frames, newFrame)
 					}
