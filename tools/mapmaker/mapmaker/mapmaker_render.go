@@ -1122,6 +1122,20 @@ type NPCEditorState struct {
 	// String representations for input fields
 	spawnXStr string
 	spawnYStr string
+
+	// Frame editing fields
+	selectedFrameIndex int // Track which frame is selected for editing
+	frameRotation      string
+	frameScaleX        string
+	frameScaleY        string
+	frameOffsetX       string
+	frameOffsetY       string
+	frameMirrorX       bool
+	frameMirrorY       bool
+	frameTintR         string
+	frameTintG         string
+	frameTintB         string
+	frameTintA         string
 }
 
 func (m *MapMaker) renderNPCEditor() {
@@ -1440,6 +1454,58 @@ func (m *MapMaker) renderNPCEditor() {
 					},
 					rl.Vector2{}, 0, rl.White,
 				)
+
+				if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) {
+					if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+						editor.advSelectingFrameIndex = i
+						m.showResourceViewer = true
+						m.uiState.resourceViewerOpenTime = rl.GetTime()
+					} else if rl.IsMouseButtonPressed(rl.MouseRightButton) {
+						editor.selectedFrameIndex = i
+
+						// Initialize frame settings with current values
+						var currentTex *beam.AnimatedTexture
+						switch editor.editingDirection {
+						case beam.DirUp:
+							currentTex = editor.textures.Up
+						case beam.DirDown:
+							currentTex = editor.textures.Down
+						case beam.DirLeft:
+							currentTex = editor.textures.Left
+						case beam.DirRight:
+							currentTex = editor.textures.Right
+						}
+
+						if currentTex != nil && i < len(currentTex.Frames) {
+							frame := currentTex.Frames[i]
+							editor.frameRotation = fmt.Sprintf("%.1f", frame.Rotation)
+							editor.frameScaleX = fmt.Sprintf("%.2f", frame.ScaleX)
+							editor.frameScaleY = fmt.Sprintf("%.2f", frame.ScaleY)
+							editor.frameOffsetX = fmt.Sprintf("%.2f", frame.OffsetX)
+							editor.frameOffsetY = fmt.Sprintf("%.2f", frame.OffsetY)
+							editor.frameMirrorX = frame.MirrorX
+							editor.frameMirrorY = frame.MirrorY
+							editor.frameTintR = fmt.Sprintf("%d", frame.Tint.R)
+							editor.frameTintG = fmt.Sprintf("%d", frame.Tint.G)
+							editor.frameTintB = fmt.Sprintf("%d", frame.Tint.B)
+							editor.frameTintA = fmt.Sprintf("%d", frame.Tint.A)
+						} else {
+							// Set default values
+							editor.frameRotation = "0.0"
+							editor.frameScaleX = "1.0"
+							editor.frameScaleY = "1.0"
+							editor.frameOffsetX = "0.0"
+							editor.frameOffsetY = "0.0"
+							editor.frameMirrorX = false
+							editor.frameMirrorY = false
+							editor.frameTintR = "255"
+							editor.frameTintG = "255"
+							editor.frameTintB = "255"
+							editor.frameTintA = "255"
+						}
+					}
+				}
+
 			} else {
 				rl.DrawText("+", int32(frameRect.X+frameRect.Width/2-5),
 					int32(frameRect.Y+frameRect.Height/2-8), 16, rl.DarkGray)
@@ -1453,17 +1519,21 @@ func (m *MapMaker) renderNPCEditor() {
 		}
 	}
 
+	if editor.selectedFrameIndex >= 0 {
+		m.renderNPCFrameSettings(editor, dialogX, dialogY, dialogWidth, dialogHeight)
+	}
+
 	// Save/Cancel buttons
 	saveBtn := rl.Rectangle{
 		X:      float32(dialogX + dialogWidth - 200),
-		Y:      float32(dialogY + dialogHeight - 50),
+		Y:      float32(dialogY + dialogHeight - 40),
 		Width:  80,
 		Height: 30,
 	}
 
 	cancelBtn := rl.Rectangle{
 		X:      float32(dialogX + dialogWidth - 100),
-		Y:      float32(dialogY + dialogHeight - 50),
+		Y:      float32(dialogY + dialogHeight - 40),
 		Width:  80,
 		Height: 30,
 	}
@@ -1690,6 +1760,7 @@ func (m *MapMaker) renderNPCList() {
 				spawnYStr:        strconv.Itoa(npc.Data.SpawnPos.Y), // Initialize spawnYStr
 			}
 			m.uiState.showNPCList = false
+			m.uiState.npcEditor.selectedFrameIndex = -1
 		}
 
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
@@ -1700,6 +1771,190 @@ func (m *MapMaker) renderNPCList() {
 
 	if len(m.tileGrid.NPCs) == 0 {
 		rl.DrawText("No NPCs placed on the map", int32(dialogX+200), int32(contentY+20), 20, rl.Gray)
+	}
+}
+
+func (m *MapMaker) renderNPCFrameSettings(editor *NPCEditorState, dialogX, dialogY, dialogWidth, dialogHeight int) {
+	if editor.selectedFrameIndex < 0 || editor.selectedFrameIndex >= len(editor.selectedFrames) {
+		return
+	}
+
+	// Get the current frame's texture
+	var currentTex *beam.AnimatedTexture
+	switch editor.editingDirection {
+	case beam.DirUp:
+		currentTex = editor.textures.Up
+	case beam.DirDown:
+		currentTex = editor.textures.Down
+	case beam.DirLeft:
+		currentTex = editor.textures.Left
+	case beam.DirRight:
+		currentTex = editor.textures.Right
+	}
+
+	if currentTex == nil || editor.selectedFrameIndex >= len(currentTex.Frames) {
+		return
+	}
+
+	// Settings panel position and dimensions
+	settingsPanelWidth := 250
+	settingsPanelHeight := 400
+	settingsX := dialogX + dialogWidth - settingsPanelWidth - 20
+	settingsY := dialogY + 50
+
+	// Draw settings panel background
+	rl.DrawRectangle(int32(settingsX), int32(settingsY),
+		int32(settingsPanelWidth), int32(settingsPanelHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(settingsX),
+		Y:      float32(settingsY),
+		Width:  float32(settingsPanelWidth),
+		Height: float32(settingsPanelHeight),
+	}, 1, rl.Gray)
+
+	// Title
+	rl.DrawText(fmt.Sprintf("Frame %d Settings", editor.selectedFrameIndex+1),
+		int32(settingsX+10), int32(settingsY+10), 16, rl.Black)
+
+	// Helper function for input fields
+	createFrameInput := func(label string, value *string, y int, numeric bool) {
+		inputRect := rl.Rectangle{
+			X:      float32(settingsX + 100),
+			Y:      float32(y),
+			Width:  100,
+			Height: 25,
+		}
+		rl.DrawText(label, int32(settingsX+10), int32(y+5), 14, rl.Black)
+		rl.DrawRectangleRec(inputRect, rl.LightGray)
+		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+5), 14, rl.Black)
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) &&
+			rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeNPCInput = "frame_" + label
+		}
+
+		if m.uiState.activeNPCInput == "frame_"+label {
+			rl.DrawRectangleLinesEx(inputRect, 2, rl.Blue)
+			key := rl.GetCharPressed()
+			for key > 0 {
+				if numeric {
+					if (key >= '0' && key <= '9') || key == '.' || key == '-' {
+						*value += string(key)
+					}
+				} else {
+					if key >= 32 && key <= 126 {
+						*value += string(key)
+					}
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Input fields
+	y := settingsY + 40
+	spacing := 30
+	createFrameInput("Rotation", &editor.frameRotation, y, true)
+	y += spacing
+	createFrameInput("Scale X", &editor.frameScaleX, y, true)
+	y += spacing
+	createFrameInput("Scale Y", &editor.frameScaleY, y, true)
+	y += spacing
+	createFrameInput("Offset X", &editor.frameOffsetX, y, true)
+	y += spacing
+	createFrameInput("Offset Y", &editor.frameOffsetY, y, true)
+	y += spacing
+
+	// Mirror toggles
+	checkboxSize := int32(20)
+	mirrorXBox := rl.Rectangle{
+		X:      float32(settingsX + 100),
+		Y:      float32(y),
+		Width:  float32(checkboxSize),
+		Height: float32(checkboxSize),
+	}
+	mirrorYBox := rl.Rectangle{
+		X:      float32(settingsX + 180),
+		Y:      float32(y),
+		Width:  float32(checkboxSize),
+		Height: float32(checkboxSize),
+	}
+
+	rl.DrawText("Mirror:", int32(settingsX+10), int32(y+2), 14, rl.Black)
+	rl.DrawRectangleRec(mirrorXBox, rl.LightGray)
+	rl.DrawRectangleRec(mirrorYBox, rl.LightGray)
+	rl.DrawText("X", int32(mirrorXBox.X-15), int32(mirrorXBox.Y+2), 14, rl.Black)
+	rl.DrawText("Y", int32(mirrorYBox.X-15), int32(mirrorYBox.Y+2), 14, rl.Black)
+
+	if editor.frameMirrorX {
+		rl.DrawRectangle(int32(mirrorXBox.X+4), int32(mirrorXBox.Y+4),
+			int32(mirrorXBox.Width-8), int32(mirrorXBox.Height-8), rl.Black)
+	}
+	if editor.frameMirrorY {
+		rl.DrawRectangle(int32(mirrorYBox.X+4), int32(mirrorYBox.Y+4),
+			int32(mirrorYBox.Width-8), int32(mirrorYBox.Height-8), rl.Black)
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), mirrorXBox) &&
+		rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.frameMirrorX = !editor.frameMirrorX
+	}
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), mirrorYBox) &&
+		rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.frameMirrorY = !editor.frameMirrorY
+	}
+
+	y += spacing + 10
+
+	// Tint inputs
+	rl.DrawText("Tint:", int32(settingsX+10), int32(y+2), 14, rl.Black)
+	createFrameInput("R", &editor.frameTintR, y, true)
+	createFrameInput("G", &editor.frameTintG, y+spacing, true)
+	createFrameInput("B", &editor.frameTintB, y+spacing*2, true)
+	createFrameInput("A", &editor.frameTintA, y+spacing*3, true)
+
+	// Apply button
+	applyBtn := rl.Rectangle{
+		X:      float32(settingsX + settingsPanelWidth - 70),
+		Y:      float32(settingsY + settingsPanelHeight - 35),
+		Width:  60,
+		Height: 25,
+	}
+	rl.DrawRectangleRec(applyBtn, rl.Green)
+	rl.DrawText("Apply", int32(applyBtn.X+10), int32(applyBtn.Y+5), 14, rl.White)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), applyBtn) &&
+		rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Apply the changes to the current frame
+		rotation, _ := strconv.ParseFloat(editor.frameRotation, 64)
+		scaleX, _ := strconv.ParseFloat(editor.frameScaleX, 64)
+		scaleY, _ := strconv.ParseFloat(editor.frameScaleY, 64)
+		offsetX, _ := strconv.ParseFloat(editor.frameOffsetX, 64)
+		offsetY, _ := strconv.ParseFloat(editor.frameOffsetY, 64)
+		tintR, _ := strconv.Atoi(editor.frameTintR)
+		tintG, _ := strconv.Atoi(editor.frameTintG)
+		tintB, _ := strconv.Atoi(editor.frameTintB)
+		tintA, _ := strconv.Atoi(editor.frameTintA)
+
+		frame := &currentTex.Frames[editor.selectedFrameIndex]
+		frame.Rotation = rotation
+		frame.ScaleX = scaleX
+		frame.ScaleY = scaleY
+		frame.OffsetX = offsetX
+		frame.OffsetY = offsetY
+		frame.MirrorX = editor.frameMirrorX
+		frame.MirrorY = editor.frameMirrorY
+		frame.Tint = rl.Color{
+			R: uint8(tintR),
+			G: uint8(tintG),
+			B: uint8(tintB),
+			A: uint8(tintA),
+		}
+
+		editor.selectedFrameIndex = -1
 	}
 }
 
