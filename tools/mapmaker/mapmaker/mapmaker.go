@@ -1046,6 +1046,7 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 	// Check if selection is for NPC editor frame
 	if m.uiState.npcEditor != nil && m.uiState.npcEditor.visible {
 		editor := m.uiState.npcEditor
+
 		frameCount, _ := strconv.Atoi(editor.frameCountStr)
 		if frameCount > 0 && editor.advSelectingFrameIndex >= 0 {
 			selectedFrame := editor.advSelectingFrameIndex
@@ -1061,6 +1062,8 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 			case beam.DirRight:
 				currentTex = editor.textures.Right
 			}
+			animationTime, _ := strconv.ParseFloat(editor.animationTimeStr, 64)
+			currentTex.AnimationTime = animationTime
 
 			// Update just the selected frame
 			if selectedFrame < len(editor.selectedFrames) {

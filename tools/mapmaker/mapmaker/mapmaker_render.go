@@ -1176,6 +1176,21 @@ func (m *MapMaker) renderNPCEditor() {
 				*value = (*value)[:len(*value)-1]
 			}
 		}
+
+		if label == "Animation Time" {
+			animTime, err := strconv.ParseFloat(*value, 64)
+			if err == nil && animTime >= 0 {
+				if editor.editingDirection == beam.DirUp {
+					editor.textures.Up.AnimationTime = animTime
+				} else if editor.editingDirection == beam.DirDown {
+					editor.textures.Down.AnimationTime = animTime
+				} else if editor.editingDirection == beam.DirLeft {
+					editor.textures.Left.AnimationTime = animTime
+				} else if editor.editingDirection == beam.DirRight {
+					editor.textures.Right.AnimationTime = animTime
+				}
+			}
+		}
 	}
 
 	// Left column - Basic attributes
@@ -1517,10 +1532,25 @@ func (m *MapMaker) renderNPCEditor() {
 		}
 
 		// Save NPC data to the tile
-		m.tileGrid.Map.NPCs = append(m.tileGrid.Map.NPCs, &beam.NPC{
-			Data: npcData,
-			Pos:  npcData.SpawnPos,
-		})
+		found := false
+		for i, npc := range m.tileGrid.Map.NPCs {
+			if npc.Data.Name == editor.name {
+				m.tileGrid.Map.NPCs[i] = &beam.NPC{
+					Data: npcData,
+					Pos:  npcData.SpawnPos,
+				}
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// Add new NPC to the map
+			m.tileGrid.Map.NPCs = append(m.tileGrid.Map.NPCs, &beam.NPC{
+				Data: npcData,
+				Pos:  npcData.SpawnPos,
+			})
+		}
 		m.closeNPCEditor()
 	}
 }
@@ -1635,8 +1665,6 @@ func (m *MapMaker) renderNPCList() {
 				spawnXStr:        strconv.Itoa(npc.Data.SpawnPos.X), // Initialize spawnXStr
 				spawnYStr:        strconv.Itoa(npc.Data.SpawnPos.Y), // Initialize spawnYStr
 			}
-			// Remove the old NPC before editing
-			m.tileGrid.NPCs = append(m.tileGrid.NPCs[:i], m.tileGrid.NPCs[i+1:]...)
 			m.uiState.showNPCList = false
 		}
 
@@ -1685,7 +1713,7 @@ func (m *MapMaker) renderTextureEditor() {
 	}
 
 	dialogWidth := 300
-	dialogHeight := 400
+	dialogHeight := 440
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
@@ -2301,7 +2329,5 @@ func (m *MapMaker) closeAllEditors() {
 
 func (m *MapMaker) closeNPCEditor() {
 	m.uiState.npcEditor = nil
-	m.showResourceViewer = false  // Close the resource viewer if it was open
-	m.uiState.activeInput = ""    // Clear any active input
-	m.uiState.activeNPCInput = "" // Clear NPC-specific input
+	m.showResourceViewer = false // Close the resource viewer if it was open
 }

@@ -61,19 +61,15 @@ func (t *AnimatedTexture) GetCurrentFrame(currentTime float64) Texture {
 	if len(t.Frames) == 0 {
 		return Texture{ScaleX: 1.0, ScaleY: 1.0, Tint: rl.White}
 	}
-	if t.IsAnimated {
-		if len(t.Frames) > 1 {
-			if currentTime-t.lastFrameTime >= t.AnimationTime {
-				t.CurrentFrame = (t.CurrentFrame + 1) % len(t.Frames)
-				t.lastFrameTime = currentTime
-			}
-			if t.CurrentFrame >= len(t.Frames) {
-				t.CurrentFrame = 0
-			}
-			return t.Frames[t.CurrentFrame]
-		} else {
-			return t.Frames[0]
+	if len(t.Frames) > 1 {
+		if currentTime-t.lastFrameTime >= t.AnimationTime {
+			t.CurrentFrame = (t.CurrentFrame + 1) % len(t.Frames)
+			t.lastFrameTime = currentTime
 		}
+		if t.CurrentFrame >= len(t.Frames) {
+			t.CurrentFrame = 0
+		}
+		return t.Frames[t.CurrentFrame]
 	}
 	return t.Frames[0]
 }
