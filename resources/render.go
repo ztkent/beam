@@ -34,6 +34,13 @@ func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.R
 				frame.Tint = rl.White
 			}
 
+			if frame.MirrorX {
+				info.Region.Width = -info.Region.Width
+			}
+			if frame.MirrorY {
+				info.Region.Height = -info.Region.Height
+			}
+
 			rl.DrawTexturePro(
 				info.Texture,
 				info.Region,
@@ -64,6 +71,14 @@ func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.R
 		if frame.Tint == (rl.Color{}) {
 			frame.Tint = rl.White
 		}
+
+		if frame.MirrorX {
+			info.Region.Width = -info.Region.Width
+		}
+		if frame.MirrorY {
+			info.Region.Height = -info.Region.Height
+		}
+
 		rl.DrawTexturePro(
 			info.Texture,
 			info.Region,
