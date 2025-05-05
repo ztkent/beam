@@ -2,7 +2,4 @@
 
 ## Map Maker
 
-- fix editing npcs
-  - fix the animation time var not saving
-
 - item tiles. that way we can keep the textures, tiles, and items separate.
