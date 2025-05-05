@@ -42,7 +42,8 @@ type UIState struct {
 	toast *Toast
 
 	// Resource Viewer
-	resourceViewerScroll int
+	resourceViewerScroll   int
+	resourceViewerOpenTime float64
 
 	// Tile Info Popup
 	tileInfoPos     []beam.Position
@@ -687,6 +688,7 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 func (m *MapMaker) handleResourceViewer(viewResourcesBtn IconButton, loadResourceBtn IconButton) {
 	if m.isIconButtonClicked(viewResourcesBtn) {
 		m.showResourceViewer = true
+		m.uiState.resourceViewerOpenTime = rl.GetTime()
 	}
 	if m.isIconButtonClicked(loadResourceBtn) {
 		name, filepath, isSheet, sheetMargin, gridSize, err := openLoadResourceDialog()

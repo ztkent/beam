@@ -604,6 +604,9 @@ func (m *MapMaker) renderResourceViewer() {
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
+	timeSinceOpen := rl.GetTime() - m.uiState.resourceViewerOpenTime
+	canAcceptClicks := timeSinceOpen >= 0.5
+
 	// Draw main dialog box with layered borders for a cleaner look
 	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
 	rl.DrawRectangleLinesEx(rl.Rectangle{
@@ -819,7 +822,7 @@ func (m *MapMaker) renderResourceViewer() {
 				rl.DrawRectangleLinesEx(clickArea, 2, rl.Blue)
 			}
 
-			if rl.CheckCollisionPointRec(rl.GetMousePosition(), clickArea) &&
+			if canAcceptClicks && rl.CheckCollisionPointRec(rl.GetMousePosition(), clickArea) &&
 				rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 				tex, err := m.resources.GetTexture("default", texInfo.Name)
 				if err != nil {
@@ -1444,6 +1447,7 @@ func (m *MapMaker) renderNPCEditor() {
 			if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 				m.uiState.npcEditor.advSelectingFrameIndex = i
 				m.showResourceViewer = true
+				m.uiState.resourceViewerOpenTime = rl.GetTime()
 			}
 		}
 	}
@@ -1931,7 +1935,7 @@ func (m *MapMaker) renderTextureEditor() {
 	rl.DrawText("Advanced", int32(advancedBtn.X+4), int32(advancedBtn.Y+8), 16, rl.Black)
 
 	// Handle button clicks
-	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) && !m.uiState.showAdvancedEditor {
 		m.closeTextureEditor()
 	}
 
@@ -2058,7 +2062,6 @@ func (m *MapMaker) renderAdvancedEditor() {
 	if editor == nil {
 		return
 	}
-
 	dialogWidth := 600
 	dialogHeight := 500
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
@@ -2263,6 +2266,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 		if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			editor.advSelectingFrameIndex = i
 			m.showResourceViewer = true
+			m.uiState.resourceViewerOpenTime = rl.GetTime()
 		}
 	}
 
@@ -2281,7 +2285,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 		m.closeTextureEditor()
 	}
 
-	if rl.CheckCollisionPointRec(rl.GetMousePosition(), exitBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), exitBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) && !m.showResourceViewer {
 		m.closeAllEditors()
 		m.uiState.activeInput = ""
 	}
@@ -2371,6 +2375,7 @@ func (m *MapMaker) closeTextureEditor() {
 	m.uiState.textureEditor = nil
 	m.uiState.showAdvancedEditor = false
 	m.uiState.activeInput = ""
+	m.showResourceViewer = false // Close the resource viewer if it was open
 }
 
 func (m *MapMaker) closeAllEditors() {
