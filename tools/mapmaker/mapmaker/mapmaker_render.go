@@ -256,6 +256,13 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 					Height: pos.Height * float32(frame.ScaleY),
 				}
 
+				if frame.MirrorX {
+					info.Region.Width = -info.Region.Width
+				}
+				if frame.MirrorY {
+					info.Region.Height = -info.Region.Height
+				}
+
 				// Add the tint
 				if frame.Tint == (rl.Color{}) {
 					frame.Tint = rl.White
@@ -288,6 +295,14 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 				Width:  pos.Width * float32(frame.ScaleX),
 				Height: pos.Height * float32(frame.ScaleY),
 			}
+
+			if frame.MirrorY {
+				destRect.Width = -destRect.Width
+			}
+			if frame.MirrorX {
+				destRect.Height = -destRect.Height
+			}
+
 			rl.DrawTexturePro(
 				info.Texture,
 				info.Region,
@@ -988,6 +1003,8 @@ func (m *MapMaker) renderTileInfoPopup() {
 					editor.scaley = fmt.Sprintf("%.2f", firstFrame.ScaleY)
 					editor.offsetX = fmt.Sprintf("%.2f", firstFrame.OffsetX)
 					editor.offsetY = fmt.Sprintf("%.2f", firstFrame.OffsetY)
+					editor.mirrorX = firstFrame.MirrorX
+					editor.mirrorY = firstFrame.MirrorY
 					editor.tintR = fmt.Sprintf("%d", firstFrame.Tint.R)
 					editor.tintG = fmt.Sprintf("%d", firstFrame.Tint.G)
 					editor.tintB = fmt.Sprintf("%d", firstFrame.Tint.B)
@@ -1002,6 +1019,8 @@ func (m *MapMaker) renderTileInfoPopup() {
 					editor.tintG = "255"
 					editor.tintB = "255"
 					editor.tintA = "255"
+					editor.mirrorX = false
+					editor.mirrorY = false
 				}
 				m.uiState.textureEditor = editor
 			}
@@ -1693,6 +1712,8 @@ type TextureEditorState struct {
 	tintG         string
 	tintB         string
 	tintA         string
+	mirrorX       bool
+	mirrorY       bool
 	clearedInputs map[string]bool
 	layer         beam.Layer
 
@@ -1713,7 +1734,7 @@ func (m *MapMaker) renderTextureEditor() {
 	}
 
 	dialogWidth := 300
-	dialogHeight := 440
+	dialogHeight := 480
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
@@ -1732,7 +1753,7 @@ func (m *MapMaker) renderTextureEditor() {
 
 	// Input fields
 	y := dialogY + 50
-	padding := 20
+	padding := 10
 	labelWidth := 80
 	inputWidth := 100
 	inputHeight := 30
@@ -1776,6 +1797,31 @@ func (m *MapMaker) renderTextureEditor() {
 		}
 	}
 
+	// Helper function to create boolean input field
+	createBoolInput := func(label string, value *bool, yPos int) {
+		rl.DrawText(label, int32(dialogX+padding), int32(yPos+8), 16, rl.Black)
+		checkboxRect := rl.Rectangle{
+			X:      float32(dialogX + padding + labelWidth),
+			Y:      float32(yPos),
+			Width:  float32(inputHeight),
+			Height: float32(inputHeight),
+		}
+		rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+		if *value {
+			rl.DrawRectangle(
+				int32(checkboxRect.X+5),
+				int32(checkboxRect.Y+5),
+				int32(checkboxRect.Width-10),
+				int32(checkboxRect.Height-10),
+				rl.Black,
+			)
+		}
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			*value = !*value
+		}
+	}
+
 	// Set the layer dropdown
 	layerY := y
 	y += inputHeight + padding
@@ -1791,13 +1837,17 @@ func (m *MapMaker) renderTextureEditor() {
 	y += inputHeight + padding
 	createInput("Offset Y", &editor.offsetY, y)
 	y += inputHeight + padding
+	createBoolInput("Mirror X", &editor.mirrorX, y)
+	y += inputHeight + padding
+	createBoolInput("Mirror Y", &editor.mirrorY, y)
+	y += inputHeight + padding
 
 	// Draw layer dropdown
 	m.renderLayerDropdown(dialogX, padding, layerY, labelWidth, inputWidth+55, inputHeight, editor)
 
 	// Continue with tint inputs
 	tintLabel := "Tint RGBA:"
-	rl.DrawText(tintLabel, int32(dialogX+padding)-10, int32(y+8), 16, rl.Black)
+	rl.DrawText(tintLabel, int32(dialogX+padding)-5, int32(y+8), 16, rl.Black)
 
 	tintWidth := 45
 	tintSpacing := 5
@@ -1900,6 +1950,8 @@ func (m *MapMaker) renderTextureEditor() {
 				frame.ScaleY, _ = strconv.ParseFloat(editor.scaley, 64)
 				frame.OffsetX, _ = strconv.ParseFloat(editor.offsetX, 64)
 				frame.OffsetY, _ = strconv.ParseFloat(editor.offsetY, 64)
+				frame.MirrorX = editor.mirrorX
+				frame.MirrorY = editor.mirrorY
 				r, _ := strconv.Atoi(editor.tintR)
 				g, _ := strconv.Atoi(editor.tintG)
 				b, _ := strconv.Atoi(editor.tintB)
@@ -2144,7 +2196,7 @@ func (m *MapMaker) renderAdvancedEditor() {
 		}
 	}
 
-	// Adjust selectedFrames slice size if frameCount changed
+	// Adjust selected frames slice size if frameCount changed
 	if len(editor.advSelectedFrames) != frameCount && frameCount >= 0 {
 		newFrames := make([]string, frameCount)
 		copy(newFrames, editor.advSelectedFrames)

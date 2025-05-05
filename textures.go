@@ -12,6 +12,8 @@ type Texture struct {
 	OffsetX  float64
 	OffsetY  float64
 	Tint     rl.Color
+	MirrorX  bool
+	MirrorY  bool
 }
 
 // Layers for rendering -
