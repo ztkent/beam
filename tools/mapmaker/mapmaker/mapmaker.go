@@ -78,9 +78,10 @@ type UIState struct {
 	gridHeight int
 
 	// Tile Editor Popup
-	textureEditor      *TextureEditorState
-	activeInput        string
-	showAdvancedEditor bool
+	textureEditor          *TextureEditorState
+	activeInput            string
+	showAdvancedEditor     bool
+	advancedEditorOpenTime float64
 
 	// NPC Editor State
 	npcEditor      *NPCEditorState

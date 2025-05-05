@@ -995,6 +995,7 @@ func (m *MapMaker) renderTileInfoPopup() {
 				editor.advSelectingFrameIndex = -1
 				m.uiState.textureEditor = editor
 				m.uiState.showAdvancedEditor = true
+				m.uiState.advancedEditorOpenTime = rl.GetTime()
 				m.uiState.activeInput = ""
 			} else {
 				// Use simple editor for non-complex textures
@@ -1726,6 +1727,7 @@ type TextureEditorState struct {
 	advFrameCountStr       string
 	advSelectedFrames      []string // Stores texture names for each frame
 	advSelectingFrameIndex int      // Index of the frame being selected via resource viewer, -1 if none
+	selectedFrameIndex     int
 }
 
 func (m *MapMaker) renderTextureEditor() {
@@ -1980,9 +1982,11 @@ func (m *MapMaker) renderTextureEditor() {
 			editor.advAnimationTimeStr = "0.5"           // Default animation time
 			editor.advFrameCountStr = "2"                // Default frame count
 			editor.advSelectedFrames = make([]string, 2) // Initialize based on default count
+			editor.selectedFrameIndex = -1               // Initialize to no selection
 		}
 		editor.advSelectingFrameIndex = -1
 		m.uiState.showAdvancedEditor = true
+		m.uiState.advancedEditorOpenTime = rl.GetTime()
 		m.uiState.activeInput = ""
 	}
 	if m.uiState.showAdvancedEditor {
@@ -2066,6 +2070,9 @@ func (m *MapMaker) renderAdvancedEditor() {
 	dialogHeight := 500
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	timeSinceOpen := rl.GetTime() - m.uiState.advancedEditorOpenTime
+	canAcceptClicks := timeSinceOpen >= 0.5
 
 	// Draw dialog background
 	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
@@ -2204,6 +2211,9 @@ func (m *MapMaker) renderAdvancedEditor() {
 		newFrames := make([]string, frameCount)
 		copy(newFrames, editor.advSelectedFrames)
 		editor.advSelectedFrames = newFrames
+		if editor.selectedFrameIndex >= frameCount {
+			editor.selectedFrameIndex = -1
+		}
 	}
 
 	// Frame Selection Area
@@ -2230,7 +2240,11 @@ func (m *MapMaker) renderAdvancedEditor() {
 
 		// Draw preview box
 		rl.DrawRectangleRec(frameRect, rl.LightGray)
-		rl.DrawRectangleLinesEx(frameRect, 1, rl.Gray)
+		if i == editor.selectedFrameIndex {
+			rl.DrawRectangleLinesEx(frameRect, 2, rl.Blue)
+		} else {
+			rl.DrawRectangleLinesEx(frameRect, 1, rl.Gray)
+		}
 
 		// Draw selected texture preview if available
 		if i < len(editor.advSelectedFrames) && editor.advSelectedFrames[i] != "" {
@@ -2257,13 +2271,16 @@ func (m *MapMaker) renderAdvancedEditor() {
 				// Draw placeholder if texture is missing but selected
 				rl.DrawText("?", int32(int(frameRect.X)+framePreviewSize/2-5), int32(int(frameRect.Y)+framePreviewSize/2-10), 20, rl.Red)
 			}
+			if canAcceptClicks && rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseRightButton) {
+				editor.selectedFrameIndex = i
+			}
 		} else {
 			// Draw placeholder for empty slot
 			rl.DrawText("+", int32(int(frameRect.X)+framePreviewSize/2-5), int32(int(frameRect.Y)+framePreviewSize/2-10), 20, rl.DarkGray)
 		}
 
 		// Handle click to select texture for this frame
-		if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		if canAcceptClicks && rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			editor.advSelectingFrameIndex = i
 			m.showResourceViewer = true
 			m.uiState.resourceViewerOpenTime = rl.GetTime()
