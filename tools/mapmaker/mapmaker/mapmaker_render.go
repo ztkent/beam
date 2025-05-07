@@ -2204,7 +2204,6 @@ func (m *MapMaker) renderTextureEditor() {
 			if editor.texIndex < len(tile.Textures) && editor.frameIndex < len(tile.Textures[editor.texIndex].Frames) {
 				currTexture := tile.Textures[editor.texIndex]
 				currTexture.Layer = editor.layer
-
 				frame := &currTexture.Frames[editor.frameIndex]
 				frame.Rotation, _ = strconv.ParseFloat(editor.rotation, 64)
 				frame.ScaleX, _ = strconv.ParseFloat(editor.scalex, 64)

@@ -516,10 +516,22 @@ func (m *MapMaker) update() {
 							spawnPos: selectedTile,
 							name:     "New NPC",
 							textures: &beam.NPCTexture{
-								Up:    &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
-								Down:  &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
-								Left:  &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
-								Right: &beam.AnimatedTexture{Frames: make([]beam.Texture, 0)},
+								Up: &beam.AnimatedTexture{
+									Frames:     make([]beam.Texture, 0),
+									IsAnimated: true,
+								},
+								Down: &beam.AnimatedTexture{
+									Frames:     make([]beam.Texture, 0),
+									IsAnimated: true,
+								},
+								Left: &beam.AnimatedTexture{
+									Frames:     make([]beam.Texture, 0),
+									IsAnimated: true,
+								},
+								Right: &beam.AnimatedTexture{
+									Frames:     make([]beam.Texture, 0),
+									IsAnimated: true,
+								},
 							},
 							health:           "100",
 							attack:           "10",
@@ -1069,6 +1081,7 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 			currentTex.AnimationTime = animationTime
 
 			// Update just the selected frame
+			// TODO: We delete frames when we increase the size lol
 			if selectedFrame < len(editor.selectedFrames) {
 				editor.selectedFrames[selectedFrame] = texInfo.Name
 
@@ -1078,6 +1091,7 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 				}
 
 				// Update the specific frame
+				//TODO: Add defaults here!!
 				currentTex.Frames[selectedFrame] = beam.Texture{Name: texInfo.Name}
 			}
 		}

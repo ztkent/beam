@@ -144,7 +144,8 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 			npc.Data.TookDamageThisFrame = false
 		}
 	} else {
-		rm.RenderTexture(beam.NewSimpleTileTexture(npc.GetCurrentTexture().GetCurrentFrame(rl.GetTime()).Name), pos, tileSize)
+		// TODO: NPC frames can have settings for rotation, scale, and tint
+		rm.RenderTexture(npc.GetCurrentTexture(), pos, tileSize)
 	}
 
 	// Only show health bar for 5 seconds after health changes
