@@ -533,18 +533,20 @@ func (m *MapMaker) update() {
 									IsAnimated: true,
 								},
 							},
-							health:           "100",
-							attack:           "10",
-							defense:          "5",
-							attackSpeed:      "1.0",
-							attackRange:      "1.0",
-							moveSpeed:        "3.0",
-							aggroRange:       "5",
-							isHostile:        true,
-							editingDirection: beam.DirDown,
-							frameCountStr:    "1",
-							animationTimeStr: "0.5",
-							selectedFrames:   make([]string, 1),
+							health:                 "100",
+							attack:                 "10",
+							defense:                "5",
+							attackSpeed:            "1.0",
+							attackRange:            "1.0",
+							moveSpeed:              "3.0",
+							aggroRange:             "5",
+							isHostile:              true,
+							editingDirection:       beam.DirDown,
+							frameCountStr:          "1",
+							animationTimeStr:       "0.5",
+							selectedFrames:         make([]string, 0),
+							advSelectingFrameIndex: -1,
+							selectedFrameIndex:     -1,
 						}
 					}
 					break
@@ -1081,18 +1083,28 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 			currentTex.AnimationTime = animationTime
 
 			// Update just the selected frame
-			// TODO: We delete frames when we increase the size lol
 			if selectedFrame < len(editor.selectedFrames) {
 				editor.selectedFrames[selectedFrame] = texInfo.Name
 
 				// Ensure frames array is large enough
 				if len(currentTex.Frames) < frameCount {
-					currentTex.Frames = make([]beam.Texture, frameCount)
+					newFrames := make([]beam.Texture, frameCount)
+					copy(newFrames, currentTex.Frames)
+					currentTex.Frames = newFrames
 				}
 
 				// Update the specific frame
-				//TODO: Add defaults here!!
-				currentTex.Frames[selectedFrame] = beam.Texture{Name: texInfo.Name}
+				currentTex.Frames[selectedFrame] = beam.Texture{
+					Name:     texInfo.Name,
+					Rotation: 0,
+					ScaleX:   1.0,
+					ScaleY:   1.0,
+					OffsetX:  0,
+					OffsetY:  0,
+					MirrorX:  false,
+					MirrorY:  false,
+					Tint:     rl.White,
+				}
 			}
 		}
 		editor.advSelectingFrameIndex = -1 // Reset selection index
