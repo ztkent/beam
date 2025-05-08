@@ -135,7 +135,8 @@ type ResourceDialog struct {
 	path        string
 	isSheet     bool
 	sheetMargin int32
-	gridSize    int32
+	gridSizeX   int32
+	gridSizeY   int32
 	visible     bool
 }
 
@@ -706,11 +707,11 @@ func (m *MapMaker) handleResourceViewer(viewResourcesBtn IconButton, loadResourc
 		m.uiState.resourceViewerOpenTime = rl.GetTime()
 	}
 	if m.isIconButtonClicked(loadResourceBtn) {
-		name, filepath, isSheet, sheetMargin, gridSize, err := openLoadResourceDialog()
+		name, filepath, isSheet, sheetMargin, gridSizeX, gridSizeY, err := openLoadResourceDialog()
 		if err != "" {
 			fmt.Println("Error loading resource:", err)
 			m.showToast(err, ToastError)
-		} else if err := m.loadResource(name, filepath, isSheet, sheetMargin, gridSize); err != nil {
+		} else if err := m.loadResource(name, filepath, isSheet, sheetMargin, gridSizeX, gridSizeY); err != nil {
 			fmt.Println("Error loading texture:", err)
 			m.showToast(err.Error(), ToastError)
 		}
@@ -858,22 +859,24 @@ func (m *MapMaker) updateGridSize() {
 // loadResource loads a resource into the resource manager
 // Supports loading both spritesheets and individual textures
 // For spritesheets, it will display the spritesheet viewer to confirm options
-func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, sheetMargin int32, gridSize int32) error {
+func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, sheetMargin int32, gridSizeX int32, gridSizeY int32) error {
 	newRes := resources.Resource{
 		Name:        name,
 		Path:        filepath,
 		IsSheet:     isSheet,
 		SheetMargin: sheetMargin,
-		GridSize:    gridSize,
+		GridSizeX:   gridSizeX,
+		GridSizeY:   gridSizeY,
 	}
 
 	// Display the spritesheet viewer, have user confirm sheet options
 	if isSheet {
-		finalGridSize, finalSheetMargin, err := viewer.ViewSpritesheet(newRes)
+		finalGridSizeX, finalGridSizeY, finalSheetMargin, err := viewer.ViewSpritesheet(newRes)
 		if err != nil {
 			return err
 		}
-		newRes.GridSize = finalGridSize
+		newRes.GridSizeX = finalGridSizeX
+		newRes.GridSizeY = finalGridSizeY
 		newRes.SheetMargin = finalSheetMargin
 	}
 

@@ -26,7 +26,8 @@ type Viewer struct {
 type UIState struct {
 	ShowFileDialog bool
 	Margin         int32
-	GridSize       int32
+	GridSizeX      int32
+	GridSizeY      int32
 	CurrentFile    string
 	RM             *resources.ResourceManager
 	Sheet          *resources.SpriteSheet
@@ -65,8 +66,9 @@ func InitConfig() Config {
 
 func InitUI() *UIState {
 	ui := &UIState{
-		Margin:   1,
-		GridSize: 16,
+		Margin:    1,
+		GridSizeX: 16,
+		GridSizeY: 16,
 	}
 	return ui
 }
@@ -85,7 +87,8 @@ func (s *UIState) reload() {
 			Path:        s.CurrentFile,
 			IsSheet:     true,
 			SheetMargin: int32(s.Margin),
-			GridSize:    int32(s.GridSize),
+			GridSizeX:   int32(s.GridSizeX),
+			GridSizeY:   int32(s.GridSizeY),
 		},
 	}
 
@@ -187,17 +190,17 @@ func (s *UIState) RenderSprites(cfg Config) {
 			X:      float32(x),
 			Y:      yPos,
 			Width:  float32(cfg.DisplaySize),
-			Height: float32(cfg.DisplaySize),
+			Height: float32(cfg.DisplaySize) * float32(rect.Height) / float32(rect.Width),
 		}
 		rl.DrawTexturePro(s.Sheet.Texture, source, dest, rl.Vector2{}, 0, rl.White)
 
 		rl.DrawRectangleLinesEx(dest, 1, rl.Gray)
-		rl.DrawText(name, int32(x), int32(int32(yPos)+cfg.DisplaySize+2), 10, rl.DarkGray)
+		rl.DrawText(name, int32(x), int32(yPos+dest.Height+2), 10, rl.DarkGray)
 
 		x += cfg.DisplaySize + cfg.Padding
 		if x > 700 {
 			x = cfg.StartX
-			y += cfg.DisplaySize + cfg.Padding + 20
+			y += int32(dest.Height) + cfg.Padding + 20
 		}
 	}
 
@@ -245,7 +248,7 @@ func (s *UIState) RenderUI(cfg Config, showSettings *bool) {
 	}
 
 	if *showSettings {
-		panelHeight := int32(90)
+		panelHeight := int32(100)
 		panelWidth := int32(300)
 
 		settingsRect := rl.Rectangle{X: 400 - float32(panelWidth/2), Y: float32(cfg.HeaderHeight + 5)}
@@ -270,7 +273,8 @@ func (s *UIState) RenderUI(cfg Config, showSettings *bool) {
 		)
 
 		oldMargin := s.Margin
-		oldGridSize := s.GridSize
+		oldGridSizeX := s.GridSizeX
+		oldGridSizeY := s.GridSizeY
 
 		titleText := "Settings"
 		titleWidth := rl.MeasureText(titleText, 15)
@@ -284,7 +288,7 @@ func (s *UIState) RenderUI(cfg Config, showSettings *bool) {
 		inputHeight := float32(20)
 		spacing := float32(40)
 
-		totalWidth := inputWidth*2 + spacing
+		totalWidth := inputWidth*3 + spacing*2
 		startX := settingsRect.X + (float32(panelWidth)-totalWidth)/2
 
 		marginInput := rl.Rectangle{
@@ -293,23 +297,30 @@ func (s *UIState) RenderUI(cfg Config, showSettings *bool) {
 			Width:  inputWidth,
 			Height: inputHeight,
 		}
-
-		gridInput := rl.Rectangle{
+		gridInputX := rl.Rectangle{
 			X:      startX + inputWidth + spacing,
 			Y:      settingsRect.Y + 45,
 			Width:  inputWidth,
 			Height: inputHeight,
 		}
 
+		gridInputY := rl.Rectangle{
+			X:      startX + (inputWidth+spacing)*2,
+			Y:      settingsRect.Y + 45,
+			Width:  inputWidth,
+			Height: inputHeight,
+		}
+
 		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 24)
-		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 128)
+		s.GridSizeX = drawInputField(gridInputX, "Grid X", s.GridSizeX, 1, 128)
+		s.GridSizeY = drawInputField(gridInputY, "Grid Y", s.GridSizeY, 1, 128)
 
 		helpText := "Use Up/Down keys when selected"
 		helpWidth := rl.MeasureText(helpText, 10)
 		helpX := settingsRect.X + float32(panelWidth/2) - float32(helpWidth)/2
 		rl.DrawText(helpText, int32(helpX), int32(marginInput.Y+30), 10, rl.DarkGray)
 
-		if oldMargin != s.Margin || oldGridSize != s.GridSize {
+		if oldMargin != s.Margin || oldGridSizeX != s.GridSizeX || oldGridSizeY != s.GridSizeY {
 			s.reload()
 		}
 	}
@@ -342,7 +353,7 @@ func (s *UIState) RenderViewerUI(cfg Config, showSettings *bool) error {
 	}
 
 	if *showSettings {
-		panelHeight := int32(90)
+		panelHeight := int32(100)
 		panelWidth := int32(300)
 
 		settingsRect := rl.Rectangle{X: 400 - float32(panelWidth/2), Y: float32(cfg.HeaderHeight + 5)}
@@ -367,8 +378,8 @@ func (s *UIState) RenderViewerUI(cfg Config, showSettings *bool) error {
 		)
 
 		oldMargin := s.Margin
-		oldGridSize := s.GridSize
-
+		oldGridSizeX := s.GridSizeX
+		oldGridSizeY := s.GridSizeY
 		titleText := "Settings"
 		titleWidth := rl.MeasureText(titleText, 15)
 		rl.DrawText(titleText,
@@ -381,7 +392,7 @@ func (s *UIState) RenderViewerUI(cfg Config, showSettings *bool) error {
 		inputHeight := float32(20)
 		spacing := float32(40)
 
-		totalWidth := inputWidth*2 + spacing
+		totalWidth := inputWidth*3 + spacing*2
 		startX := settingsRect.X + (float32(panelWidth)-totalWidth)/2
 
 		marginInput := rl.Rectangle{
@@ -391,22 +402,30 @@ func (s *UIState) RenderViewerUI(cfg Config, showSettings *bool) error {
 			Height: inputHeight,
 		}
 
-		gridInput := rl.Rectangle{
+		gridInputX := rl.Rectangle{
 			X:      startX + inputWidth + spacing,
 			Y:      settingsRect.Y + 45,
 			Width:  inputWidth,
 			Height: inputHeight,
 		}
 
+		gridInputY := rl.Rectangle{
+			X:      startX + (inputWidth+spacing)*2,
+			Y:      settingsRect.Y + 45,
+			Width:  inputWidth,
+			Height: inputHeight,
+		}
+
 		s.Margin = drawInputField(marginInput, "Margin", s.Margin, 0, 24)
-		s.GridSize = drawInputField(gridInput, "Grid Size", s.GridSize, 1, 128)
+		s.GridSizeX = drawInputField(gridInputX, "Grid X", s.GridSizeX, 1, 128)
+		s.GridSizeY = drawInputField(gridInputY, "Grid Y", s.GridSizeY, 1, 128)
 
 		helpText := "Use Up/Down keys when selected"
 		helpWidth := rl.MeasureText(helpText, 10)
 		helpX := settingsRect.X + float32(panelWidth/2) - float32(helpWidth)/2
 		rl.DrawText(helpText, int32(helpX), int32(marginInput.Y+30), 10, rl.DarkGray)
 
-		if oldMargin != s.Margin || oldGridSize != s.GridSize {
+		if oldMargin != s.Margin || oldGridSizeX != s.GridSizeX || oldGridSizeY != s.GridSizeY {
 			s.reload()
 		}
 	}
@@ -509,11 +528,12 @@ func naturalSort(a, b string) bool {
 }
 
 // LoadSpritesheet loads a spritesheet with the specified configuration and returns the viewer instance
-func ViewSpritesheet(res resources.Resource) (int32, int32, error) {
+func ViewSpritesheet(res resources.Resource) (int32, int32, int32, error) {
 	viewer := NewViewer()
 	viewer.UIState.CurrentFile = res.Path
 	viewer.UIState.Margin = res.SheetMargin
-	viewer.UIState.GridSize = res.GridSize
+	viewer.UIState.GridSizeX = res.GridSizeX
+	viewer.UIState.GridSizeY = res.GridSizeY
 	viewer.UIState.reload()
 
 	showSettings := false
@@ -530,11 +550,11 @@ func ViewSpritesheet(res resources.Resource) (int32, int32, error) {
 				break
 			} else if err.Error() == "cancelled" {
 				rl.EndDrawing()
-				return 0, 0, err
+				return 0, 0, 0, err
 			}
 		}
 		rl.EndDrawing()
 	}
 
-	return viewer.UIState.GridSize, viewer.UIState.Margin, nil
+	return viewer.UIState.GridSizeX, viewer.UIState.GridSizeY, viewer.UIState.Margin, nil
 }

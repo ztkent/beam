@@ -283,11 +283,12 @@ func openCloseConfirmationDialog() bool {
 	}
 }
 
-func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
+func openLoadResourceDialog() (string, string, bool, int32, int32, int32, string) {
 	dialog := ResourceDialog{
 		visible:     true,
 		sheetMargin: 0,
-		gridSize:    16,
+		gridSizeX:   16,
+		gridSizeY:   16,
 	}
 
 	dialogWidth := int32(400)
@@ -295,7 +296,7 @@ func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
 
 	for dialog.visible {
 		if rl.WindowShouldClose() {
-			return "", "", false, 0, 0, "Cancelled"
+			return "", "", false, 0, 0, 0, "Cancelled"
 		}
 
 		dialogX := (rl.GetScreenWidth() - int(dialogWidth)) / 2
@@ -367,34 +368,69 @@ func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
 
 		// Grid size controls
 		if dialog.isSheet {
-			rl.DrawText(fmt.Sprintf("Grid Size: %d", dialog.gridSize), int32(dialogX+20), int32(dialogY+230), 16, rl.Black)
+			baseY := float32(dialogY + 230)
 
-			minusButtonBounds := rl.Rectangle{
+			// X Grid size controls
+			rl.DrawText("Grid Size X:", int32(dialogX+20), int32(baseY), 16, rl.Black)
+			minusButtonXBounds := rl.Rectangle{
 				X:      float32(dialogX + 120),
-				Y:      float32(dialogY + 230),
+				Y:      baseY,
 				Width:  20,
 				Height: 20,
 			}
-			plusButtonBounds := rl.Rectangle{
+			plusButtonXBounds := rl.Rectangle{
 				X:      float32(dialogX + 150),
-				Y:      float32(dialogY + 230),
+				Y:      baseY,
 				Width:  20,
 				Height: 20,
 			}
+			rl.DrawRectangleRec(minusButtonXBounds, rl.LightGray)
+			rl.DrawRectangleRec(plusButtonXBounds, rl.LightGray)
+			rl.DrawText("-", int32(minusButtonXBounds.X+7), int32(minusButtonXBounds.Y+2), 16, rl.Black)
+			rl.DrawText("+", int32(plusButtonXBounds.X+6), int32(plusButtonXBounds.Y+2), 16, rl.Black)
+			rl.DrawText(fmt.Sprintf("%d", dialog.gridSizeX), int32(dialogX+180), int32(baseY), 16, rl.Black)
 
-			rl.DrawRectangleRec(minusButtonBounds, rl.LightGray)
-			rl.DrawRectangleRec(plusButtonBounds, rl.LightGray)
-			rl.DrawText("-", int32(minusButtonBounds.X+7), int32(minusButtonBounds.Y+2), 16, rl.Black)
-			rl.DrawText("+", int32(plusButtonBounds.X+6), int32(plusButtonBounds.Y+2), 16, rl.Black)
+			// Y Grid size controls
+			rl.DrawText("Grid Size Y:", int32(dialogX+20), int32(baseY+25), 16, rl.Black)
+			minusButtonYBounds := rl.Rectangle{
+				X:      float32(dialogX + 120),
+				Y:      baseY + 25,
+				Width:  20,
+				Height: 20,
+			}
+			plusButtonYBounds := rl.Rectangle{
+				X:      float32(dialogX + 150),
+				Y:      baseY + 25,
+				Width:  20,
+				Height: 20,
+			}
+			rl.DrawRectangleRec(minusButtonYBounds, rl.LightGray)
+			rl.DrawRectangleRec(plusButtonYBounds, rl.LightGray)
+			rl.DrawText("-", int32(minusButtonYBounds.X+7), int32(minusButtonYBounds.Y+2), 16, rl.Black)
+			rl.DrawText("+", int32(plusButtonYBounds.X+6), int32(plusButtonYBounds.Y+2), 16, rl.Black)
+			rl.DrawText(fmt.Sprintf("%d", dialog.gridSizeY), int32(dialogX+180), int32(baseY+25), 16, rl.Black)
 
-			if rl.CheckCollisionPointRec(mousePos, minusButtonBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-				if dialog.gridSize > 8 {
-					dialog.gridSize--
+			// Handle X grid size buttons
+			if rl.CheckCollisionPointRec(mousePos, minusButtonXBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				if dialog.gridSizeX > 8 {
+					dialog.gridSizeX--
 				}
 			}
-			if rl.CheckCollisionPointRec(mousePos, plusButtonBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-				if dialog.gridSize < 128 {
-					dialog.gridSize++
+			if rl.CheckCollisionPointRec(mousePos, plusButtonXBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				if dialog.gridSizeX < 128 {
+					dialog.gridSizeX++
+				}
+			}
+
+			// Handle Y grid size buttons
+			if rl.CheckCollisionPointRec(mousePos, minusButtonYBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				if dialog.gridSizeY > 8 {
+					dialog.gridSizeY--
+				}
+			}
+			if rl.CheckCollisionPointRec(mousePos, plusButtonYBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+				if dialog.gridSizeY < 128 {
+					dialog.gridSizeY++
 				}
 			}
 		}
@@ -421,14 +457,14 @@ func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
 		if rl.CheckCollisionPointRec(mousePos, cancelButtonBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			dialog.visible = false
 			rl.EndDrawing()
-			return "", "", false, 0, 0, "Cancelled"
+			return "", "", false, 0, 0, 0, "Cancelled"
 		}
 
 		if rl.CheckCollisionPointRec(mousePos, confirmButtonBounds) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 			if dialog.name != "" && dialog.path != "" {
 				dialog.visible = false
 				rl.EndDrawing()
-				return dialog.name, dialog.path, dialog.isSheet, dialog.sheetMargin, dialog.gridSize, ""
+				return dialog.name, dialog.path, dialog.isSheet, dialog.sheetMargin, dialog.gridSizeX, dialog.gridSizeY, ""
 			}
 		}
 
@@ -447,7 +483,7 @@ func openLoadResourceDialog() (string, string, bool, int32, int32, string) {
 		rl.EndDrawing()
 	}
 
-	return "", "", false, 0, 0, "Cancelled"
+	return "", "", false, 0, 0, 0, "Cancelled"
 }
 
 func openFileDialog() string {

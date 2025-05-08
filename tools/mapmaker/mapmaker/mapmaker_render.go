@@ -733,7 +733,7 @@ func (m *MapMaker) renderResourceViewer() {
 
 			// Draw grid size and margin info
 			gridInfo := fmt.Sprintf("Grid: %dx%d  Margin: %d",
-				texInfo.GridSize, texInfo.GridSize, texInfo.Margin)
+				texInfo.GridSizeX, texInfo.GridSizeY, texInfo.Margin)
 			rl.DrawText(gridInfo, int32(itemRect.X+10), int32(itemRect.Y+28), 14, rl.DarkGray)
 
 			// Delete button

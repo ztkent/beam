@@ -41,13 +41,14 @@ type Texture struct {
 }
 
 type SpriteSheet struct {
-	Name     string
-	Path     string
-	Texture  rl.Texture2D
-	Sprites  map[string]Rectangle
-	GridSize int32
-	Margin   int32
-	Loaded   bool
+	Name      string
+	Path      string
+	Texture   rl.Texture2D
+	Sprites   map[string]Rectangle
+	GridSizeX int32
+	GridSizeY int32
+	Margin    int32
+	Loaded    bool
 }
 
 type Rectangle struct {
@@ -58,12 +59,13 @@ type Rectangle struct {
 }
 
 type Resource struct {
-	Name        string
-	Path        string
-	IsSheet     bool
-	SheetData   map[string][]int32 // map[spriteName][x,y] coordinates in grid units
-	SheetMargin int32
-	GridSize    int32
+	Name        string             `json:"Name"`
+	Path        string             `json:"Path"`
+	IsSheet     bool               `json:"IsSheet"`
+	SheetData   map[string][]int32 `json:"SheetData,omitempty"`
+	SheetMargin int32              `json:"SheetMargin"`
+	GridSizeX   int32              `json:"GridSizeX"`
+	GridSizeY   int32              `json:"GridSizeY"`
 }
 
 type ResourceState struct {
@@ -145,35 +147,40 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 
 	for _, def := range textureDefs {
 		if def.IsSheet {
-			gridSize := def.GridSize
-			if gridSize == 0 {
-				gridSize = DefaultGridSize
+			gridSizeX := def.GridSizeX
+			gridSizeY := def.GridSizeY
+			if gridSizeX == 0 {
+				gridSizeX = DefaultGridSize
+			}
+			if gridSizeY == 0 {
+				gridSizeY = DefaultGridSize
 			}
 
 			spriteSheet := &SpriteSheet{
-				Name:     def.Name,
-				Path:     def.Path,
-				Sprites:  make(map[string]Rectangle),
-				GridSize: gridSize,
-				Margin:   def.SheetMargin,
-				Loaded:   false,
+				Name:      def.Name,
+				Path:      def.Path,
+				Sprites:   make(map[string]Rectangle),
+				GridSizeX: gridSizeX,
+				GridSizeY: gridSizeY,
+				Margin:    def.SheetMargin,
+				Loaded:    false,
 			}
 
 			// Automatically load all sprites in the sheet. Assign names based on their path & position.
 			if len(def.SheetData) == 0 {
 				tempTexture := rl.LoadTexture(def.Path)
 				fileName := strings.TrimSuffix(filepath.Base(def.Path), filepath.Ext(def.Path))
-				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSize, def.SheetMargin)
+				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSizeX, gridSizeY, def.SheetMargin)
 				rl.UnloadTexture(tempTexture)
 			}
 
 			// Initialize sprite regions
 			for spriteName, pos := range def.SheetData {
 				spriteSheet.Sprites[spriteName] = Rectangle{
-					X:      pos[0] * (gridSize + def.SheetMargin),
-					Y:      pos[1] * (gridSize + def.SheetMargin),
-					Width:  gridSize,
-					Height: gridSize,
+					X:      pos[0] * (gridSizeX + def.SheetMargin),
+					Y:      pos[1] * (gridSizeY + def.SheetMargin),
+					Width:  gridSizeX,
+					Height: gridSizeY,
 				}
 			}
 			spriteSheets = append(spriteSheets, spriteSheet)
@@ -206,14 +213,14 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 	return nil
 }
 
-func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteSize, margin int32) map[string][]int32 {
+func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteSizeX, spriteSizeY, margin int32) map[string][]int32 {
 	sheetName := fileName
 	if name != "" {
 		sheetName = name
 	}
 	sheetData := make(map[string][]int32)
-	cols := (texture.Width)/(spriteSize+margin) + 1
-	rows := (texture.Height)/(spriteSize+margin) + 1
+	cols := (texture.Width)/(spriteSizeX+margin) + 1
+	rows := (texture.Height)/(spriteSizeY+margin) + 1
 	for row := int32(0); row < rows; row++ {
 		for col := int32(0); col < cols; col++ {
 			spriteName := fmt.Sprintf("%s_%d_%d", sheetName, row, col)
@@ -468,32 +475,37 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 			}
 
 			if resource.IsSheet {
-				gridSize := resource.GridSize
-				if gridSize == 0 {
-					gridSize = DefaultGridSize
+				gridSizeX := resource.GridSizeX
+				gridSizeY := resource.GridSizeY
+				if gridSizeX == 0 {
+					gridSizeX = DefaultGridSize
+				}
+				if gridSizeY == 0 {
+					gridSizeY = DefaultGridSize
 				}
 				spriteSheet := &SpriteSheet{
-					Name:     resource.Name,
-					Path:     resource.Path,
-					Sprites:  make(map[string]Rectangle),
-					GridSize: gridSize,
-					Margin:   resource.SheetMargin,
-					Loaded:   false,
+					Name:      resource.Name,
+					Path:      resource.Path,
+					Sprites:   make(map[string]Rectangle),
+					GridSizeX: gridSizeX,
+					GridSizeY: gridSizeY,
+					Margin:    resource.SheetMargin,
+					Loaded:    false,
 				}
 
 				if len(resource.SheetData) == 0 {
 					tempTexture := rl.LoadTexture(resource.Path)
 					fileName := strings.TrimSuffix(filepath.Base(resource.Path), filepath.Ext(resource.Path))
-					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSize, resource.SheetMargin)
+					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSizeX, gridSizeY, resource.SheetMargin)
 					rl.UnloadTexture(tempTexture)
 				}
 
 				for spriteName, pos := range resource.SheetData {
 					spriteSheet.Sprites[spriteName] = Rectangle{
-						X:      pos[0] * (gridSize + resource.SheetMargin),
-						Y:      pos[1] * (gridSize + resource.SheetMargin),
-						Width:  gridSize,
-						Height: gridSize,
+						X:      pos[0] * (gridSizeX + resource.SheetMargin),
+						Y:      pos[1] * (gridSizeY + resource.SheetMargin),
+						Width:  gridSizeX,
+						Height: gridSizeY,
 					}
 				}
 				view.SpriteSheets = append(view.SpriteSheets, spriteSheet)
@@ -580,7 +592,7 @@ func (rm *ResourceManager) SaveState() ResourceState {
 		for _, sheet := range scene.SpriteSheets {
 			sheetData := make(map[string][]int32)
 			for name, rect := range sheet.Sprites {
-				sheetData[name] = []int32{rect.X / (sheet.GridSize + sheet.Margin), rect.Y / (sheet.GridSize + sheet.Margin)}
+				sheetData[name] = []int32{rect.X / (sheet.GridSizeX + sheet.Margin), rect.Y / (sheet.GridSizeY + sheet.Margin)}
 			}
 			sceneState.SpriteSheets = append(sceneState.SpriteSheets, Resource{
 				Name:        sheet.Name,
@@ -588,7 +600,8 @@ func (rm *ResourceManager) SaveState() ResourceState {
 				IsSheet:     true,
 				SheetData:   sheetData,
 				SheetMargin: sheet.Margin,
-				GridSize:    sheet.GridSize,
+				GridSizeX:   sheet.GridSizeX,
+				GridSizeY:   sheet.GridSizeY,
 			})
 		}
 
@@ -624,13 +637,16 @@ func InitFromState(state ResourceState) *ResourceManager {
 
 		// Convert sprite sheet definitions
 		for _, sheet := range sceneState.SpriteSheets {
+			gridSizeX := sheet.GridSizeX
+			gridSizeY := sheet.GridSizeY
 			textureDefs = append(textureDefs, Resource{
 				Name:        sheet.Name,
 				Path:        sheet.Path,
 				IsSheet:     true,
 				SheetData:   sheet.SheetData,
 				SheetMargin: sheet.SheetMargin,
-				GridSize:    sheet.GridSize,
+				GridSizeX:   gridSizeX,
+				GridSizeY:   gridSizeY,
 			})
 		}
 
