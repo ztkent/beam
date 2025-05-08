@@ -1130,6 +1130,9 @@ type NPCEditorState struct {
 	spawnXStr string
 	spawnYStr string
 
+	attackable bool
+	impassable bool
+
 	// Frame editing fields
 	selectedFrameIndex int // Track which frame is selected for editing
 	frameRotation      string
@@ -1258,6 +1261,53 @@ func (m *MapMaker) renderNPCEditor() {
 	y += inputHeight + padding
 	createNPCInput("Spawn Y", &editor.spawnYStr, leftX, y, true) // Added Spawn Y
 
+	y += inputHeight + padding
+	checkboxRect := rl.Rectangle{
+		X:      float32(leftX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputHeight),
+		Height: float32(inputHeight),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.attackable {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Attackable", int32(leftX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.attackable = !editor.attackable
+	}
+
+	// Add impassable checkbox
+	y += inputHeight + padding
+	checkboxRect = rl.Rectangle{
+		X:      float32(leftX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputHeight),
+		Height: float32(inputHeight),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.impassable {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Impassable", int32(leftX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.impassable = !editor.impassable
+	}
+
 	// Right column - Movement and behavior
 	y = startY
 	createNPCInput("Move Speed", &editor.moveSpeed, rightX, y, true)
@@ -1266,7 +1316,7 @@ func (m *MapMaker) renderNPCEditor() {
 	y += inputHeight + padding
 
 	// Hostile checkbox
-	checkboxRect := rl.Rectangle{
+	checkboxRect = rl.Rectangle{
 		X:      float32(rightX + labelWidth),
 		Y:      float32(y),
 		Width:  float32(inputHeight),
@@ -1585,7 +1635,8 @@ func (m *MapMaker) renderNPCEditor() {
 			Direction:       beam.DirDown,
 			Hostile:         editor.isHostile,
 			AggroRange:      aggroRange,
-			Attackable:      true,
+			Attackable:      editor.attackable,
+			Impassable:      editor.impassable,
 			SpawnPos:        beam.Position{X: spawnX, Y: spawnY}, // Set SpawnPos
 		}
 
@@ -1765,6 +1816,8 @@ func (m *MapMaker) renderNPCList() {
 				selectedFrames:   make([]string, 1),
 				spawnXStr:        strconv.Itoa(npc.Data.SpawnPos.X), // Initialize spawnXStr
 				spawnYStr:        strconv.Itoa(npc.Data.SpawnPos.Y), // Initialize spawnYStr
+				attackable:       npc.Data.Attackable,
+				impassable:       npc.Data.Impassable,
 			}
 			m.uiState.showNPCList = false
 			m.uiState.npcEditor.selectedFrameIndex = -1

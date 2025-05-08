@@ -5,3 +5,8 @@
 - item tiles. that way we can keep the textures, tiles, and items separate.
 
 - make some npc's "impassable"
+- custom npc walk paths
+- npc's max distance from spawnpoint
+
+- add the overworld npc
+  - support chat options and all that

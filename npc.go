@@ -44,6 +44,7 @@ type NPCData struct {
 	Direction        Direction
 
 	Attackable          bool
+	Impassable          bool
 	Hostile             bool
 	AggroRange          int
 	AttackState         int
