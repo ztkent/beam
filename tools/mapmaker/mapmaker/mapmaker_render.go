@@ -711,7 +711,7 @@ func (m *MapMaker) renderResourceViewer() {
 
 	if m.uiState.resourceManageMode {
 		// Draw manage mode view
-		itemHeight := int32(40)
+		itemHeight := int32(60) // Increased height to accommodate additional info
 		padding := int32(10)
 		for i, texInfo := range ss {
 			y := int32(dialogY+titleHeight+i*int(itemHeight)) - int32(m.uiState.resourceViewerScroll)
@@ -727,17 +727,24 @@ func (m *MapMaker) renderResourceViewer() {
 			}
 			// Draw item background
 			rl.DrawRectangleRec(itemRect, rl.LightGray)
+
 			// Draw texture name
 			rl.DrawText(texInfo.Name, int32(itemRect.X+10), int32(itemRect.Y+8), 16, rl.Black)
-			// Draw delete button
+
+			// Draw grid size and margin info
+			gridInfo := fmt.Sprintf("Grid: %dx%d  Margin: %d",
+				texInfo.GridSize, texInfo.GridSize, texInfo.Margin)
+			rl.DrawText(gridInfo, int32(itemRect.X+10), int32(itemRect.Y+28), 14, rl.DarkGray)
+
+			// Delete button
 			deleteBtn := rl.Rectangle{
 				X:      itemRect.X + itemRect.Width - 60,
-				Y:      itemRect.Y + 2,
+				Y:      itemRect.Y + 10,
 				Width:  50,
 				Height: 26,
 			}
 			rl.DrawRectangleRec(deleteBtn, rl.Red)
-			rl.DrawText("Delete", int32(deleteBtn.X+5), int32(deleteBtn.Y+6), 14, rl.White)
+			rl.DrawText("Delete", int32(deleteBtn.X+3), int32(deleteBtn.Y+5), 14, rl.White)
 
 			// Handle delete button click
 			if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
