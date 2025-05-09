@@ -69,6 +69,7 @@ type NPCData struct {
 	Attackable          bool
 	Impassable          bool
 	Hostile             bool
+	WanderRange         int
 	AggroRange          int
 	AttackState         int
 	AttackStateTime     float32
@@ -95,8 +96,7 @@ func NewSimpleNPCTexture(name string) *NPCTexture {
 	}
 }
 
-// Move the NPC towards the player if within aggro range
-// or move randomly if not. The NPC will also check for obstacles.
+// Run the NPC update loop.
 func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 	if npc.Data.Dead {
 		totalDyingFrames := 32
@@ -116,16 +116,25 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 		}
 	}
 
+	npc.Wander(playerPos, tiles)
+	return false
+}
+
+// A simple wandering algo that moves the NPC towards the player if within aggro range.
+// If not, it will wander randomly. The NPC will also check for obstacles.
+// The NPC will try to stay within its wander range, if possible.
+func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 	currentTime := float32(rl.GetTime())
 	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1)) {
 		return
 	}
 
 	// Calculate distance to player
-	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
+	distToPlayer := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
+	distToSpawn := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, npc.Data.SpawnPos.X, npc.Data.SpawnPos.Y)
 	var dx, dy int
 
-	if dist == 0 {
+	if distToPlayer == 0 {
 		directions := Positions{
 			{X: 0, Y: -1}, // North
 			{X: 1, Y: 0},  // East
@@ -142,12 +151,12 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 				break
 			}
 		}
-	} else if dist <= npc.Data.AggroRange && npc.Data.Hostile {
+	} else if distToPlayer <= npc.Data.AggroRange && npc.Data.Hostile {
 		isDiagonal := npc.Pos.X != playerPos.X && npc.Pos.Y != playerPos.Y
 		xDiff := playerPos.X - npc.Pos.X
 		yDiff := playerPos.Y - npc.Pos.Y
 
-		if isDiagonal && dist > 1 {
+		if isDiagonal && distToPlayer > 1 {
 			if math.Abs(float64(xDiff)) >= math.Abs(float64(yDiff)) {
 				dx = beam_math.Sign(xDiff)
 				dy = 0
@@ -167,7 +176,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 					dx = beam_math.Sign(xDiff)
 				}
 			}
-		} else if dist > 1 {
+		} else if distToPlayer > 1 {
 			if npc.Pos.X < playerPos.X {
 				dx = 1
 			} else if npc.Pos.X > playerPos.X {
@@ -186,14 +195,36 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 		}
 	} else {
 		if rand.Float32() < 0.75 {
-			directions := Positions{
-				{X: 0, Y: -1},
-				{X: 1, Y: 0},
-				{X: 0, Y: 1},
-				{X: -1, Y: 0},
+			// If we're beyond wander range, try to move back toward spawn point
+			if npc.Data.WanderRange > 0 && distToSpawn >= npc.Data.WanderRange {
+				xDiff := npc.Data.SpawnPos.X - npc.Pos.X
+				yDiff := npc.Data.SpawnPos.Y - npc.Pos.Y
+
+				if math.Abs(float64(xDiff)) >= math.Abs(float64(yDiff)) {
+					dx = beam_math.Sign(xDiff)
+					dy = 0
+				} else {
+					dx = 0
+					dy = beam_math.Sign(yDiff)
+				}
+			} else {
+				directions := Positions{
+					{X: 0, Y: -1},
+					{X: 1, Y: 0},
+					{X: 0, Y: 1},
+					{X: -1, Y: 0},
+				}
+				dir := directions[rand.Intn(len(directions))]
+				dx, dy = dir.X, dir.Y
+
+				// Check if new position would exceed wander range
+				if npc.Data.WanderRange > 0 {
+					newDistToSpawn := beam_math.ManhattanDistance(npc.Pos.X+dx, npc.Pos.Y+dy, npc.Data.SpawnPos.X, npc.Data.SpawnPos.Y)
+					if newDistToSpawn > npc.Data.WanderRange {
+						dx, dy = 0, 0
+					}
+				}
 			}
-			dir := directions[rand.Intn(len(directions))]
-			dx, dy = dir.X, dir.Y
 
 			newDist := beam_math.ManhattanDistance(npc.Pos.X+dx, npc.Pos.Y+dy, playerPos.X, playerPos.Y)
 			if newDist < 1 {
@@ -220,9 +251,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 	} else if dy < 0 {
 		npc.Data.Direction = DirUp
 	}
-
 	npc.LastMoveTime = currentTime
-	return false
 }
 
 // Attack the player if within attack range and the NPC is hostile.

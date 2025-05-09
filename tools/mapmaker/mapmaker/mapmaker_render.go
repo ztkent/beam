@@ -1117,6 +1117,7 @@ type NPCEditorState struct {
 	moveSpeed   string
 	isHostile   bool
 	aggroRange  string
+	wanderRange string
 
 	// Texture editing state
 	editingDirection       beam.Direction
@@ -1307,6 +1308,9 @@ func (m *MapMaker) renderNPCEditor() {
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		editor.impassable = !editor.impassable
 	}
+
+	y += inputHeight + padding
+	createNPCInput("Wander Range", &editor.wanderRange, leftX, y, true)
 
 	// Right column - Movement and behavior
 	y = startY
@@ -1614,8 +1618,9 @@ func (m *MapMaker) renderNPCEditor() {
 		attackRange, _ := strconv.ParseFloat(editor.attackRange, 64)
 		moveSpeed, _ := strconv.ParseFloat(editor.moveSpeed, 64)
 		aggroRange, _ := strconv.Atoi(editor.aggroRange)
-		spawnX, _ := strconv.Atoi(editor.spawnXStr) // Parse Spawn X
-		spawnY, _ := strconv.Atoi(editor.spawnYStr) // Parse Spawn Y
+		spawnX, _ := strconv.Atoi(editor.spawnXStr)
+		spawnY, _ := strconv.Atoi(editor.spawnYStr)
+		wanderRange, _ := strconv.Atoi(editor.wanderRange)
 
 		// Create NPC data
 		npcData := beam.NPCData{
@@ -1637,6 +1642,7 @@ func (m *MapMaker) renderNPCEditor() {
 			AggroRange:      aggroRange,
 			Attackable:      editor.attackable,
 			Impassable:      editor.impassable,
+			WanderRange:     wanderRange,
 			SpawnPos:        beam.Position{X: spawnX, Y: spawnY}, // Set SpawnPos
 		}
 
@@ -1818,6 +1824,7 @@ func (m *MapMaker) renderNPCList() {
 				spawnYStr:        strconv.Itoa(npc.Data.SpawnPos.Y), // Initialize spawnYStr
 				attackable:       npc.Data.Attackable,
 				impassable:       npc.Data.Impassable,
+				wanderRange:      strconv.Itoa(npc.Data.WanderRange),
 			}
 			m.uiState.showNPCList = false
 			m.uiState.npcEditor.selectedFrameIndex = -1
