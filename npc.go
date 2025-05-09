@@ -16,6 +16,29 @@ type NPCTexture struct {
 	Right *AnimatedTexture
 }
 
+type NPCs []*NPC
+
+func (npcs NPCs) IsBlocked(x, y int) bool {
+	for _, npc := range npcs {
+		if !npc.Data.Dead &&
+			npc.Data.Impassable &&
+			npc.Pos.X == x && npc.Pos.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
+func (npcs NPCs) LivingNPCs() NPCs {
+	targets := make(NPCs, 0)
+	for _, e := range npcs {
+		if !e.Data.Dead {
+			targets = append(targets, e)
+		}
+	}
+	return targets
+}
+
 type NPC struct {
 	Pos            Position
 	LastMoveTime   float32

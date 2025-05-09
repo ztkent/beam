@@ -17,7 +17,7 @@ const (
 type Map struct {
 	Width, Height int
 	Tiles         [][]Tile
-	NPCs          []*NPC
+	NPCs          NPCs
 	Start         Position
 	Exit          Position
 	Respawn       Position
