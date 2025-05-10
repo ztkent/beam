@@ -5,7 +5,6 @@
 - item tiles. that way we can keep the textures, tiles, and items separate.
 
 - custom npc walk paths
-- improve 'move speed'. Our slowest npcs are too fast.
 
 - add the overworld npc
   - support chat options and all that

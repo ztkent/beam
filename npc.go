@@ -125,7 +125,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 // The NPC will try to stay within its wander range, if possible.
 func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 	currentTime := float32(rl.GetTime())
-	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < 1.0-(float32(npc.Data.MoveSpeed-1)*0.1)) {
+	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < float32(npc.Data.MoveSpeed)) {
 		return
 	}
 
