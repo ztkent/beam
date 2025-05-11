@@ -148,7 +148,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 }
 
 // Interact with a player
-func (npc *NPC) Interact(playerPos Position) {
+func (npc *NPC) Interact(playerPos Position, currChat *chat.Chat) {
 	if !npc.Data.Interactable {
 		return
 	}
@@ -156,7 +156,11 @@ func (npc *NPC) Interact(playerPos Position) {
 	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
 	if dist <= 1 {
 		npc.Data.IsInteracting = true
-		npc.CurrentChat = chat.NewChat()
+		if currChat == nil {
+			npc.CurrentChat = chat.NewChat()
+		} else {
+			npc.CurrentChat = currChat
+		}
 	} else {
 		npc.Data.IsInteracting = false
 		return
