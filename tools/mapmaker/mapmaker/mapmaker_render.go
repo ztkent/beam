@@ -70,6 +70,16 @@ func (m *MapMaker) renderGrid() {
 						}, m.uiState.tileSize)
 					}
 				}
+
+				// Draw any items on the map
+				for _, item := range m.tileGrid.Items {
+					m.resources.RenderItem(&item, rl.Rectangle{
+						X:      float32(item.Position.X * m.uiState.tileSize),
+						Y:      float32(item.Position.Y * m.uiState.tileSize),
+						Width:  float32(m.uiState.tileSize),
+						Height: float32(m.uiState.tileSize),
+					}, m.uiState.tileSize)
+				}
 			}
 		}
 	}
