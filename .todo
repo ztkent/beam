@@ -2,6 +2,9 @@
 
 ## Map Maker
 
-- item tiles. that way we can keep the textures, tiles, and items separate.
+- create tool to place items.
+- we need a nice ui that lets us set all item properties.
+- we need to enhace the texture property to an actual AnimatedTexture.
+- should 'just work' in the game loop.
 
 - custom npc walk paths
