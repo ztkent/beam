@@ -18,6 +18,7 @@ type Map struct {
 	Width, Height int
 	Tiles         [][]Tile
 	NPCs          NPCs
+	Items         Items
 	Start         Position
 	Exit          Position
 	Respawn       Position
