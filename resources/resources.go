@@ -9,6 +9,48 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+/*
+The resource system supports:
+  - Scene-based resource management for organized loading/unloading
+  - Texture loading from individual files and sprite sheets
+  - Automatic sprite sheet slicing with configurable grid sizes
+  - Font loading and management
+  - Resource state persistence
+  - Multi-layer rendering support
+  - Memory efficient resource handling
+
+Example usage:
+    // Create a resource manager with default resources
+    rm := NewResourceManagerWithGlobal([]Resource{
+        {
+            Name: "player",
+            Path: "assets/player.png",
+            IsSheet: true,
+            GridSizeX: 32,
+            GridSizeY: 32,
+        },
+    }, &Resource{
+        Name: "gameFont",
+        Path: "assets/font.ttf",
+    })
+
+    // Add a new scene with resources
+    rm.AddScene("dungeon", []Resource{
+        {
+            Name: "tiles",
+            Path: "assets/dungeon_tiles.png",
+            IsSheet: true,
+            GridSizeX: 16,
+            GridSizeY: 16,
+        },
+    }, nil)
+
+    // Load scene resources when needed
+    rm.LoadView("dungeon")
+	// Unload scene resources when not needed
+	defer rm.UnloadView("dungeon")
+*/
+
 const (
 	DefaultGridSize int32 = 16
 	DefaultMargin   int32 = 1

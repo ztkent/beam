@@ -10,6 +10,34 @@ import (
 	beam_math "github.com/ztkent/beam/math"
 )
 
+/*
+The NPC system supports:
+  - Wandering NPCs with customizable behavior
+  - Combat-enabled NPCs with stats and attack patterns
+  - Interactive NPCs with dialog system
+  - Customizable textures for different directions
+  - Collision detection and pathfinding
+  - Health and damage system
+  - Aggro ranges and wander limits
+
+Example usage:
+    npc := &NPC{
+        Pos: Position{X: 5, Y: 5},
+        Data: NPCData{
+            Name: "Guard",
+            Texture: NewSimpleNPCTexture("guard"),
+            Health: 100,
+            MaxHealth: 100,
+            Attack: 10,
+            Defense: 5,
+            Hostile: true,
+            AggroRange: 5,
+            WanderRange: 3,
+            Impassable: true,
+        },
+    }
+*/
+
 type NPCTexture struct {
 	Up    *AnimatedTexture
 	Down  *AnimatedTexture
