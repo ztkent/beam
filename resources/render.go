@@ -178,3 +178,55 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 		}
 	}
 }
+
+// RenderItem renders an item on the screen with its texture and properties.
+func (rm *ResourceManager) RenderItem(item *beam.Item, pos rl.Rectangle, tileSize int) {
+	// Get the texture name from properties, fallback to ID if not found
+	var textureName string
+	if texture, ok := item.Properties["texture"].(string); ok {
+		textureName = texture
+	} else {
+		textureName = item.ID
+	}
+
+	// Create base texture frame
+	itemTexture := &beam.AnimatedTexture{
+		Frames: []beam.Texture{
+			{
+				Name:     textureName,
+				Rotation: 0,
+				ScaleX:   1,
+				ScaleY:   1,
+				OffsetX:  0,
+				OffsetY:  0,
+				Tint:     rl.White,
+			},
+		},
+		IsAnimated: false,
+	}
+
+	// Apply any special rendering effects based on item type
+	switch item.Type {
+	case beam.ItemTypeEquipment:
+		// Equipment items might glow or have special effects
+	case beam.ItemTypeConsumable:
+		// Consumables might have a slight bounce or hover effect
+		timeOffset := float64(rl.GetTime())
+		itemTexture.Frames[0].OffsetY = math.Sin(timeOffset*4) * 0.1 // Gentle hover
+	}
+
+	// Render the item texture
+	rm.RenderTexture(itemTexture, pos, tileSize)
+	// Draw stack size if item is stackable and count > 1
+	if item.Stackable && item.MaxStack > 1 {
+		stackSize, ok := item.Properties["count"].(int)
+		if ok && stackSize > 1 {
+			textPos := rl.Vector2{
+				X: pos.X + pos.Width - 10,
+				Y: pos.Y + pos.Height - 10,
+			}
+			text := fmt.Sprintf("%d", stackSize)
+			rl.DrawText(text, int32(textPos.X), int32(textPos.Y), 10, rl.White)
+		}
+	}
+}
