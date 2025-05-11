@@ -6,6 +6,7 @@ import (
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/ztkent/beam/chat"
 	beam_math "github.com/ztkent/beam/math"
 )
 
@@ -39,11 +40,25 @@ func (npcs NPCs) LivingNPCs() NPCs {
 	return targets
 }
 
+func (npcs NPCs) InteractableNearby(playerPos Position) NPCs {
+	targets := make(NPCs, 0)
+	for _, e := range npcs {
+		if e.Data.Interactable && !e.Data.Dead && !e.Data.IsInteracting {
+			dist := beam_math.ManhattanDistance(e.Pos.X, e.Pos.Y, playerPos.X, playerPos.Y)
+			if dist <= 1 {
+				targets = append(targets, e)
+			}
+		}
+	}
+	return targets
+}
+
 type NPC struct {
 	Pos            Position
 	LastMoveTime   float32
 	LastActionTime time.Time
 	Data           NPCData
+	CurrentChat    *chat.Chat
 }
 
 type NPCData struct {
@@ -77,6 +92,9 @@ type NPCData struct {
 	DamageFrames        int
 	DyingFrames         int
 	Dead                bool
+
+	Interactable  bool
+	IsInteracting bool
 }
 
 func NewSimpleNPCTexture(name string) *NPCTexture {
@@ -116,8 +134,51 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 		}
 	}
 
+	if npc.Data.IsInteracting {
+		if npc.CurrentChat.State == chat.DialogFinished || npc.CurrentChat.State == chat.DialogHidden {
+			npc.Data.IsInteracting = false
+		}
+		npc.CurrentChat.Update()
+		npc.CurrentChat.Draw()
+		return false
+	}
+
 	npc.Wander(playerPos, tiles)
 	return false
+}
+
+// Interact with a player
+func (npc *NPC) Interact(playerPos Position) {
+	if !npc.Data.Interactable {
+		return
+	}
+
+	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
+	if dist <= 1 {
+		npc.Data.IsInteracting = true
+		npc.CurrentChat = chat.NewChat()
+	} else {
+		npc.Data.IsInteracting = false
+		return
+	}
+
+	// Turn and face the player
+	if playerPos.X > npc.Pos.X {
+		npc.Data.Direction = DirRight
+	}
+	if playerPos.X < npc.Pos.X {
+		npc.Data.Direction = DirLeft
+	}
+	if playerPos.Y > npc.Pos.Y {
+		npc.Data.Direction = DirDown
+	}
+	if playerPos.Y < npc.Pos.Y {
+		npc.Data.Direction = DirUp
+	}
+
+	// Start the chat
+	npc.CurrentChat.Show()
+	return
 }
 
 // A simple wandering algo that moves the NPC towards the player if within aggro range.
