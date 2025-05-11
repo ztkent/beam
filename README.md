@@ -16,6 +16,12 @@
   - Multi-directional animation support
   - NPC behaviors (wandering, aggro, player tracking, and combat)
   - Chat and interaction system
+- [x] Items
+  - Equipment system with stats and level requirements
+  - Consumable items with custom effects
+  - Quest and resource items
+  - Stackable items support
+  - Animated item textures
 
 ### Map editor
 

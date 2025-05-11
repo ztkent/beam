@@ -4,6 +4,40 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+/*
+The texture system supports:
+  - Simple static textures with name and transform properties
+  - Animated textures with multiple frames
+  - Layer-based rendering system
+  - Texture transformations (rotation, scale, offset)
+  - Mirroring and tinting
+  - Frame-based animation timing
+
+Example usage:
+    // Create a static texture
+    staticTexture := &AnimatedTexture{
+        Frames: []Texture{{
+            Name: "player_idle",
+            ScaleX: 1.0,
+            ScaleY: 1.0,
+            Tint: rl.White,
+        }},
+        Layer: ForegroundLayer,
+    }
+
+    // Create an animated texture
+    animatedTexture := &AnimatedTexture{
+        Frames: []Texture{
+            {Name: "player_walk_1"},
+            {Name: "player_walk_2"},
+            {Name: "player_walk_3"},
+        },
+        IsAnimated: true,
+        AnimationTime: 0.1, // 10 frames per second
+        Layer: ForegroundLayer,
+    }
+*/
+
 type Texture struct {
 	Name     string
 	Rotation float64
