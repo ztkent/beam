@@ -2041,7 +2041,6 @@ func (m *MapMaker) renderNPCFrameSettings(editor *NPCEditorState, dialogX, dialo
 	}
 }
 
-// Add after NPCEditorState struct
 type ItemEditorState struct {
 	visible     bool
 	spawnPos    beam.Position
@@ -2270,7 +2269,6 @@ func (m *MapMaker) renderItemEditor() {
 	createItemInput("Animation Time", &editor.animationTimeStr, rightX, y, true)
 	y += inputHeight + padding
 
-	// Frame selection grid
 	frameCount, _ := strconv.Atoi(editor.frameCountStr)
 	if frameCount > 0 {
 		rl.DrawText("Animation Frames:", int32(rightX), int32(y), 16, rl.Black)
@@ -2302,6 +2300,7 @@ func (m *MapMaker) renderItemEditor() {
 			}
 
 			rl.DrawRectangleRec(frameRect, rl.LightGray)
+			rl.DrawRectangleLinesEx(frameRect, 1, rl.Gray)
 
 			if i < len(editor.selectedFrames) && editor.selectedFrames[i] != "" {
 				info, err := m.resources.GetTexture("default", editor.selectedFrames[i])
@@ -2326,63 +2325,21 @@ func (m *MapMaker) renderItemEditor() {
 					rl.Vector2{}, 0, rl.White,
 				)
 
-				if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) {
-					if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-						editor.advSelectingFrameIndex = i
-						m.showResourceViewer = true
-						m.uiState.resourceViewerOpenTime = rl.GetTime()
-					}
-				}
 			} else {
+				// Draw plus symbol for empty frame slots
 				rl.DrawText("+", int32(frameRect.X+frameRect.Width/2-5),
 					int32(frameRect.Y+frameRect.Height/2-8), 16, rl.DarkGray)
 			}
-		}
-	}
 
-	// Texture preview section
-	rl.DrawText("Item Texture:", int32(rightX), int32(y), 16, rl.Black)
-	y += 25
-
-	previewSize := int32(64)
-	previewRect := rl.Rectangle{
-		X:      float32(rightX),
-		Y:      float32(y),
-		Width:  float32(previewSize),
-		Height: float32(previewSize),
-	}
-
-	rl.DrawRectangleRec(previewRect, rl.LightGray)
-
-	if len(editor.texture.Frames) > 0 && editor.texture.Frames[0].Name != "" {
-		info, err := m.resources.GetTexture("default", editor.texture.Frames[0].Name)
-		if err == nil {
-			scale := float32(previewSize-10) / info.Region.Width
-			if info.Region.Height*scale > float32(previewSize-10) {
-				scale = float32(previewSize-10) / info.Region.Height
+			// Handle click to open resource viewer
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) {
+				if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+					editor.advSelectingFrameIndex = i
+					m.showResourceViewer = true
+					m.uiState.resourceViewerOpenTime = rl.GetTime()
+				}
 			}
-
-			rl.DrawTexturePro(
-				info.Texture,
-				info.Region,
-				rl.Rectangle{
-					X:      previewRect.X + (previewRect.Width-info.Region.Width*scale)/2,
-					Y:      previewRect.Y + (previewRect.Height-info.Region.Height*scale)/2,
-					Width:  info.Region.Width * scale,
-					Height: info.Region.Height * scale,
-				},
-				rl.Vector2{}, 0, rl.White,
-			)
 		}
-	} else {
-		rl.DrawText("+", int32(previewRect.X+previewRect.Width/2-10),
-			int32(previewRect.Y+previewRect.Height/2-10), 20, rl.DarkGray)
-	}
-
-	if rl.CheckCollisionPointRec(rl.GetMousePosition(), previewRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		editor.advSelectingFrameIndex = 0
-		m.showResourceViewer = true
-		m.uiState.resourceViewerOpenTime = rl.GetTime()
 	}
 
 	// Save/Cancel buttons
