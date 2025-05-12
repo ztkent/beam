@@ -2051,6 +2051,7 @@ type ItemEditorState struct {
 	description string
 	itemType    beam.ItemType
 	texture     *beam.AnimatedTexture
+	blocking    bool
 	equippable  bool
 	consumable  bool
 	stackable   bool
@@ -2210,6 +2211,58 @@ func (m *MapMaker) renderItemEditor() {
 
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
 		editor.equippable = !editor.equippable
+		if editor.consumable == true {
+			editor.consumable = false
+		}
+	}
+
+	y += inputHeight + padding
+	checkboxRect = rl.Rectangle{
+		X:      float32(leftX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(checkboxSize),
+		Height: float32(checkboxSize),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.blocking {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Blocking", int32(leftX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.blocking = !editor.blocking
+	}
+
+	y += inputHeight + padding
+	checkboxRect = rl.Rectangle{
+		X:      float32(leftX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(checkboxSize),
+		Height: float32(checkboxSize),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.consumable {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Consumable", int32(leftX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.consumable = !editor.consumable
+		if editor.equippable == true {
+			editor.equippable = false
+		}
 	}
 
 	// Right column - Item type and stats
@@ -2426,6 +2479,7 @@ func (m *MapMaker) renderItemEditor() {
 			Type:        editor.itemType,
 			Pos:         beam.Position{X: spawnX, Y: spawnY},
 			Texture:     editor.texture,
+			Blocking:    editor.blocking,
 			Equippable:  editor.equippable,
 			Consumable:  editor.consumable,
 			Stackable:   editor.stackable,

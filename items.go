@@ -38,6 +38,7 @@ type Item struct {
 	Pos         Position
 	Texture     *AnimatedTexture
 
+	Blocking   bool
 	Equippable bool
 	Consumable bool
 	Quantity   int
@@ -60,6 +61,15 @@ type ItemRequirements struct {
 
 // Items is a collection of items with helper methods
 type Items []Item
+
+func (items Items) IsBlocked(x, y int) bool {
+	for _, item := range items {
+		if item.Blocking && item.Pos.X == x && item.Pos.Y == y {
+			return true
+		}
+	}
+	return false
+}
 
 func NewItem(id string, name string, itemType ItemType) *Item {
 	return &Item{
