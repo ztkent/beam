@@ -3,8 +3,6 @@
 ## Map Maker
 
 - create tool to place items.
-- we need a nice ui that lets us set all item properties.
-- we need to enhace the texture property to an actual AnimatedTexture.
-- should 'just work' in the game loop.
+- item manage mode (delete edit like npcs)
 
 - custom npc walk paths
