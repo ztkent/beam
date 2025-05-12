@@ -394,12 +394,16 @@ func (m *MapMaker) renderUI() {
 		m.renderNPCEditor()
 	}
 
-	if m.showResourceViewer {
-		m.renderResourceViewer()
-	}
-
 	if m.uiState.showNPCList {
 		m.renderNPCList()
+	}
+
+	if m.uiState.itemEditor != nil && m.uiState.itemEditor.visible {
+		m.renderItemEditor()
+	}
+
+	if m.showResourceViewer {
+		m.renderResourceViewer()
 	}
 
 	// Draw status bar
@@ -2037,6 +2041,462 @@ func (m *MapMaker) renderNPCFrameSettings(editor *NPCEditorState, dialogX, dialo
 	}
 }
 
+// Add after NPCEditorState struct
+type ItemEditorState struct {
+	visible     bool
+	spawnPos    beam.Position
+	id          string
+	name        string
+	description string
+	itemType    beam.ItemType
+	texture     *beam.AnimatedTexture
+	equippable  bool
+	consumable  bool
+	stackable   bool
+	maxStack    string
+	quantity    string
+
+	// Stats
+	attack      string
+	defense     string
+	attackSpeed string
+
+	// Requirements
+	levelReq string
+
+	// Texture editing state
+	frameCountStr          string
+	animationTimeStr       string
+	selectedFrames         []string
+	advSelectingFrameIndex int
+	selectedFrameIndex     int
+
+	// String representations for input fields
+	spawnXStr string
+	spawnYStr string
+
+	// Frame editing fields
+	frameRotation string
+	frameScaleX   string
+	frameScaleY   string
+	frameOffsetX  string
+	frameOffsetY  string
+	frameMirrorX  bool
+	frameMirrorY  bool
+	frameTintR    string
+	frameTintG    string
+	frameTintB    string
+	frameTintA    string
+}
+
+func (m *MapMaker) renderItemEditor() {
+	editor := m.uiState.itemEditor
+
+	// Dialog dimensions and position
+	dialogWidth := 800
+	dialogHeight := 650
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw semi-transparent background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+
+	// Draw main dialog box
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Title
+	rl.DrawText("Item Editor", int32(dialogX+20), int32(dialogY+20), 24, rl.Black)
+
+	// Layout constants
+	const (
+		padding     = 20
+		labelWidth  = 120
+		inputWidth  = 150
+		inputHeight = 30
+		columnWidth = 350
+	)
+
+	// Start positions for the two columns
+	leftX := dialogX + padding
+	rightX := dialogX + columnWidth + padding
+	startY := dialogY + 80
+
+	// Helper function for input fields
+	createItemInput := func(label string, value *string, x, y int, numeric bool) {
+		rl.DrawText(label, int32(x), int32(y+8), 16, rl.Black)
+		inputRect := rl.Rectangle{
+			X:      float32(x + labelWidth),
+			Y:      float32(y),
+			Width:  float32(inputWidth),
+			Height: float32(inputHeight),
+		}
+
+		rl.DrawRectangleRec(inputRect, rl.LightGray)
+		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.activeItemInput = label
+		}
+
+		if m.uiState.activeItemInput == label {
+			rl.DrawRectangleLinesEx(inputRect, 2, rl.Blue)
+
+			key := rl.GetCharPressed()
+			for key > 0 {
+				if numeric {
+					if (key >= '0' && key <= '9') || key == '.' {
+						*value += string(key)
+					}
+				} else {
+					*value += string(key)
+				}
+				key = rl.GetCharPressed()
+			}
+			if rl.IsKeyPressed(rl.KeyBackspace) && len(*value) > 0 {
+				*value = (*value)[:len(*value)-1]
+			}
+		}
+	}
+
+	// Left column - Basic attributes
+	y := startY
+
+	editor.spawnXStr = fmt.Sprintf("%d", editor.spawnPos.X)
+	editor.spawnYStr = fmt.Sprintf("%d", editor.spawnPos.Y)
+
+	createItemInput("ID", &editor.id, leftX, y, false)
+	y += inputHeight + padding
+	createItemInput("Name", &editor.name, leftX, y, false)
+	y += inputHeight + padding
+	createItemInput("Description", &editor.description, leftX, y, false)
+	y += inputHeight + padding
+	createItemInput("Max Stack", &editor.maxStack, leftX, y, true)
+	y += inputHeight + padding
+	createItemInput("Quantity", &editor.quantity, leftX, y, true)
+	y += inputHeight + padding
+	createItemInput("Spawn X", &editor.spawnXStr, leftX, y, true)
+	y += inputHeight + padding
+	createItemInput("Spawn Y", &editor.spawnYStr, leftX, y, true)
+
+	// Checkboxes for item properties
+	y += inputHeight + padding
+	checkboxSize := int32(30)
+
+	// Equippable checkbox
+	checkboxRect := rl.Rectangle{
+		X:      float32(leftX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(checkboxSize),
+		Height: float32(checkboxSize),
+	}
+	rl.DrawRectangleRec(checkboxRect, rl.LightGray)
+	if editor.equippable {
+		rl.DrawRectangle(
+			int32(checkboxRect.X+5),
+			int32(checkboxRect.Y+5),
+			int32(checkboxRect.Width-10),
+			int32(checkboxRect.Height-10),
+			rl.Black,
+		)
+	}
+	rl.DrawText("Equippable", int32(leftX), int32(y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), checkboxRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.equippable = !editor.equippable
+	}
+
+	// Right column - Item type and stats
+	y = startY
+
+	// Item type dropdown
+	rl.DrawText("Item Type", int32(rightX), int32(y+8), 16, rl.Black)
+	typeRect := rl.Rectangle{
+		X:      float32(rightX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputWidth),
+		Height: float32(inputHeight),
+	}
+	rl.DrawRectangleRec(typeRect, rl.LightGray)
+	rl.DrawText(editor.name, int32(typeRect.X+5), int32(typeRect.Y+8), 16, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), typeRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		if editor.itemType < beam.ItemTypeMisc {
+			editor.itemType++
+		} else {
+			editor.itemType = beam.ItemTypeEquipment
+		}
+	}
+
+	y += inputHeight + padding
+
+	// Stats (only shown if equippable)
+	if editor.equippable {
+		createItemInput("Attack", &editor.attack, rightX, y, true)
+		y += inputHeight + padding
+		createItemInput("Defense", &editor.defense, rightX, y, true)
+		y += inputHeight + padding
+		createItemInput("Attack Speed", &editor.attackSpeed, rightX, y, true)
+		y += inputHeight + padding
+		createItemInput("Level Req", &editor.levelReq, rightX, y, true)
+		y += inputHeight + padding
+	}
+
+	// Inside the renderItemEditor function, after the item stats section:
+	y += inputHeight + padding
+
+	// Initialize the texture if it's nil
+	if editor.texture == nil {
+		editor.texture = &beam.AnimatedTexture{
+			Frames:     make([]beam.Texture, 0),
+			IsAnimated: true,
+		}
+		editor.frameCountStr = "1"
+		editor.animationTimeStr = "0.5"
+		editor.selectedFrames = make([]string, 1)
+	}
+
+	// Animation settings
+	rl.DrawText("Animation Settings:", int32(rightX), int32(y), 16, rl.Black)
+	y += 25
+
+	createItemInput("Frame Count", &editor.frameCountStr, rightX, y, true)
+	y += inputHeight + padding
+	createItemInput("Animation Time", &editor.animationTimeStr, rightX, y, true)
+	y += inputHeight + padding
+
+	// Frame selection grid
+	frameCount, _ := strconv.Atoi(editor.frameCountStr)
+	if frameCount > 0 {
+		rl.DrawText("Animation Frames:", int32(rightX), int32(y), 16, rl.Black)
+		y += 25
+
+		frameSize := int32(50)
+		framePadding := int32(5)
+		framesPerRow := (columnWidth - padding*2) / (int(frameSize) + int(framePadding))
+
+		// Adjust selected frames array size if needed
+		if len(editor.selectedFrames) != frameCount {
+			newFrames := make([]string, frameCount)
+			copy(newFrames, editor.selectedFrames)
+			editor.selectedFrames = newFrames
+		}
+
+		for i := 0; i < frameCount; i++ {
+			row := i / framesPerRow
+			col := i % framesPerRow
+
+			frameX := rightX + col*(int(frameSize)+int(framePadding))
+			frameY := y + row*(int(frameSize)+int(framePadding))
+
+			frameRect := rl.Rectangle{
+				X:      float32(frameX),
+				Y:      float32(frameY),
+				Width:  float32(frameSize),
+				Height: float32(frameSize),
+			}
+
+			rl.DrawRectangleRec(frameRect, rl.LightGray)
+
+			if i < len(editor.selectedFrames) && editor.selectedFrames[i] != "" {
+				info, err := m.resources.GetTexture("default", editor.selectedFrames[i])
+				if err != nil {
+					fmt.Println("Error getting texture:", err)
+					continue
+				}
+				scale := float32(frameSize-10) / info.Region.Width
+				if info.Region.Height*scale > float32(frameSize-10) {
+					scale = float32(frameSize-10) / info.Region.Height
+				}
+
+				rl.DrawTexturePro(
+					info.Texture,
+					info.Region,
+					rl.Rectangle{
+						X:      frameRect.X + (frameRect.Width-info.Region.Width*scale)/2,
+						Y:      frameRect.Y + (frameRect.Height-info.Region.Height*scale)/2,
+						Width:  info.Region.Width * scale,
+						Height: info.Region.Height * scale,
+					},
+					rl.Vector2{}, 0, rl.White,
+				)
+
+				if rl.CheckCollisionPointRec(rl.GetMousePosition(), frameRect) {
+					if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+						editor.advSelectingFrameIndex = i
+						m.showResourceViewer = true
+						m.uiState.resourceViewerOpenTime = rl.GetTime()
+					}
+				}
+			} else {
+				rl.DrawText("+", int32(frameRect.X+frameRect.Width/2-5),
+					int32(frameRect.Y+frameRect.Height/2-8), 16, rl.DarkGray)
+			}
+		}
+	}
+
+	// Texture preview section
+	rl.DrawText("Item Texture:", int32(rightX), int32(y), 16, rl.Black)
+	y += 25
+
+	previewSize := int32(64)
+	previewRect := rl.Rectangle{
+		X:      float32(rightX),
+		Y:      float32(y),
+		Width:  float32(previewSize),
+		Height: float32(previewSize),
+	}
+
+	rl.DrawRectangleRec(previewRect, rl.LightGray)
+
+	if len(editor.texture.Frames) > 0 && editor.texture.Frames[0].Name != "" {
+		info, err := m.resources.GetTexture("default", editor.texture.Frames[0].Name)
+		if err == nil {
+			scale := float32(previewSize-10) / info.Region.Width
+			if info.Region.Height*scale > float32(previewSize-10) {
+				scale = float32(previewSize-10) / info.Region.Height
+			}
+
+			rl.DrawTexturePro(
+				info.Texture,
+				info.Region,
+				rl.Rectangle{
+					X:      previewRect.X + (previewRect.Width-info.Region.Width*scale)/2,
+					Y:      previewRect.Y + (previewRect.Height-info.Region.Height*scale)/2,
+					Width:  info.Region.Width * scale,
+					Height: info.Region.Height * scale,
+				},
+				rl.Vector2{}, 0, rl.White,
+			)
+		}
+	} else {
+		rl.DrawText("+", int32(previewRect.X+previewRect.Width/2-10),
+			int32(previewRect.Y+previewRect.Height/2-10), 20, rl.DarkGray)
+	}
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), previewRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		editor.advSelectingFrameIndex = 0
+		m.showResourceViewer = true
+		m.uiState.resourceViewerOpenTime = rl.GetTime()
+	}
+
+	// Save/Cancel buttons
+	saveBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 200),
+		Y:      float32(dialogY + dialogHeight - 40),
+		Width:  80,
+		Height: 30,
+	}
+
+	cancelBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 100),
+		Y:      float32(dialogY + dialogHeight - 40),
+		Width:  80,
+		Height: 30,
+	}
+
+	rl.DrawRectangleRec(saveBtn, rl.Green)
+	rl.DrawRectangleRec(cancelBtn, rl.Red)
+	rl.DrawText("Save", int32(saveBtn.X+25), int32(saveBtn.Y+8), 16, rl.White)
+	rl.DrawText("Cancel", int32(cancelBtn.X+20), int32(cancelBtn.Y+8), 16, rl.White)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), cancelBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.closeItemEditor()
+		return
+	}
+
+	// Inside the save button click handler in renderItemEditor():
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), saveBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		// Validate and save item data
+		maxStack, _ := strconv.Atoi(editor.maxStack)
+		quantity, _ := strconv.Atoi(editor.quantity)
+		attack, _ := strconv.Atoi(editor.attack)
+		defense, _ := strconv.Atoi(editor.defense)
+		attackSpeed, _ := strconv.Atoi(editor.attackSpeed)
+		levelReq, _ := strconv.Atoi(editor.levelReq)
+		spawnX, _ := strconv.Atoi(editor.spawnXStr)
+		spawnY, _ := strconv.Atoi(editor.spawnYStr)
+
+		// Validate required fields
+		if editor.id == "" || editor.name == "" {
+			rl.DrawText("ID and Name are required", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+			return
+		}
+
+		// Apply animation settings
+		frameCount, _ := strconv.Atoi(editor.frameCountStr)
+		animTime, _ := strconv.ParseFloat(editor.animationTimeStr, 64)
+
+		if editor.texture == nil {
+			editor.texture = &beam.AnimatedTexture{
+				Frames:     make([]beam.Texture, 0),
+				IsAnimated: frameCount > 1,
+			}
+		}
+
+		editor.texture.AnimationTime = animTime
+		editor.texture.Frames = make([]beam.Texture, frameCount)
+		for i := 0; i < frameCount; i++ {
+			if i < len(editor.selectedFrames) {
+				editor.texture.Frames[i] = beam.Texture{
+					Name:   editor.selectedFrames[i],
+					ScaleX: 1.0,
+					ScaleY: 1.0,
+					Tint:   rl.White,
+				}
+			}
+		}
+
+		// Create item data
+		item := beam.Item{
+			ID:          editor.id,
+			Name:        editor.name,
+			Description: editor.description,
+			Type:        editor.itemType,
+			Position:    beam.Position{X: spawnX, Y: spawnY},
+			Texture:     editor.texture,
+			Equippable:  editor.equippable,
+			Consumable:  editor.consumable,
+			Stackable:   editor.stackable,
+			MaxStack:    maxStack,
+			Quantity:    quantity,
+			Stats: beam.ItemStats{
+				Attack:      attack,
+				Defense:     defense,
+				AttackSpeed: attackSpeed,
+			},
+			Requirements: beam.ItemRequirements{
+				Level: levelReq,
+			},
+		}
+
+		// Check if an item already exists at this position
+		found := false
+		for i, existingItem := range m.tileGrid.Items {
+			if existingItem.Position.X == spawnX && existingItem.Position.Y == spawnY {
+				// Update existing item
+				m.tileGrid.Items[i] = item
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// Add new item to the map
+			m.tileGrid.Items = append(m.tileGrid.Items, item)
+		}
+
+		m.showToast("Item saved successfully!", ToastSuccess)
+		m.closeItemEditor()
+		return
+	}
+}
+
 type TextureEditorState struct {
 	tile          *beam.Tile
 	visible       bool
@@ -2833,11 +3293,17 @@ func (m *MapMaker) closeTextureEditor() {
 
 func (m *MapMaker) closeAllEditors() {
 	m.closeTextureEditor()
+	m.closeItemEditor()
 	m.showTileInfo = false
 	m.uiState.activeInput = ""
 }
 
 func (m *MapMaker) closeNPCEditor() {
 	m.uiState.npcEditor = nil
+	m.showResourceViewer = false // Close the resource viewer if it was open
+}
+
+func (m *MapMaker) closeItemEditor() {
+	m.uiState.itemEditor = nil
 	m.showResourceViewer = false // Close the resource viewer if it was open
 }

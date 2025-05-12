@@ -87,6 +87,10 @@ type UIState struct {
 	npcEditor      *NPCEditorState
 	activeNPCInput string
 	showNPCList    bool
+
+	// Item Editor State
+	itemEditor      *ItemEditorState
+	activeItemInput string
 }
 
 type TileGrid struct {
@@ -553,8 +557,36 @@ func (m *MapMaker) update() {
 					}
 					break
 				case "items":
-					// TODO: Initialize item editor
-					fmt.Println("Item editor not implemented yet")
+					// Initialize item editor
+					if m.uiState.itemEditor == nil || !m.uiState.itemEditor.visible {
+						selectedTile := m.tileGrid.selectedTiles[0] // Use first selected tile
+						m.uiState.itemEditor = &ItemEditorState{
+							visible:  true,
+							spawnPos: selectedTile,
+							name:     "New Item",
+							id:       "new_item",
+							texture: &beam.AnimatedTexture{
+								Frames:     make([]beam.Texture, 0),
+								IsAnimated: true,
+							},
+							maxStack:               "1",
+							quantity:               "1",
+							attack:                 "0",
+							defense:                "0",
+							attackSpeed:            "0",
+							levelReq:               "1",
+							itemType:               beam.ItemTypeMisc,
+							equippable:             false,
+							consumable:             false,
+							stackable:              false,
+							selectedFrameIndex:     -1,
+							frameCountStr:          "1",
+							animationTimeStr:       "0.5",
+							selectedFrames:         make([]string, 0),
+							advSelectingFrameIndex: -1,
+						}
+					}
+					break
 				}
 			}
 		}
@@ -1120,6 +1152,56 @@ func (m *MapMaker) handleTextureSelect(texInfo *resources.TextureInfo) {
 
 				// Update the specific frame
 				currentTex.Frames[selectedFrame] = beam.Texture{
+					Name:     texInfo.Name,
+					Rotation: 0,
+					ScaleX:   1.0,
+					ScaleY:   1.0,
+					OffsetX:  0,
+					OffsetY:  0,
+					MirrorX:  false,
+					MirrorY:  false,
+					Tint:     rl.White,
+				}
+			}
+		}
+		editor.advSelectingFrameIndex = -1 // Reset selection index
+		m.showResourceViewer = false
+		return
+	}
+
+	// Add inside handleTextureSelect, after the NPC editor section:
+	// Check if selection is for Item editor frame
+	if m.uiState.itemEditor != nil && m.uiState.itemEditor.visible {
+		editor := m.uiState.itemEditor
+
+		frameCount, _ := strconv.Atoi(editor.frameCountStr)
+		if frameCount > 0 && editor.advSelectingFrameIndex >= 0 {
+			selectedFrame := editor.advSelectingFrameIndex
+
+			// Initialize texture if needed
+			if editor.texture == nil {
+				editor.texture = &beam.AnimatedTexture{
+					Frames:     make([]beam.Texture, 0),
+					IsAnimated: true,
+				}
+			}
+
+			animationTime, _ := strconv.ParseFloat(editor.animationTimeStr, 64)
+			editor.texture.AnimationTime = animationTime
+
+			// Update selected frame
+			if selectedFrame < len(editor.selectedFrames) {
+				editor.selectedFrames[selectedFrame] = texInfo.Name
+
+				// Ensure frames array is large enough
+				if len(editor.texture.Frames) < frameCount {
+					newFrames := make([]beam.Texture, frameCount)
+					copy(newFrames, editor.texture.Frames)
+					editor.texture.Frames = newFrames
+				}
+
+				// Update the specific frame
+				editor.texture.Frames[selectedFrame] = beam.Texture{
 					Name:     texInfo.Name,
 					Rotation: 0,
 					ScaleX:   1.0,
