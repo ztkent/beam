@@ -203,6 +203,7 @@ func (m *MapMaker) Init() {
 	m.uiState.uiTextures["location"] = rl.LoadTexture("../assets/location.png")
 	m.uiState.uiTextures["gridlines"] = rl.LoadTexture("../assets/gridlines.png")
 	m.uiState.uiTextures["npc"] = rl.LoadTexture("../assets/npc.png")
+	m.uiState.uiTextures["items"] = rl.LoadTexture("../assets/sword.png")
 
 	// Add directional arrows for viewport
 	m.uiState.uiTextures["up"] = rl.LoadTexture("../assets/up.png")
@@ -340,14 +341,14 @@ func (m *MapMaker) isUIBlocked() bool {
 }
 
 func (m *MapMaker) update() {
-	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn := m.getUIButtons()
+	tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn, itemsBtn := m.getUIButtons()
 
 	// Only handle UI interactions if no modal is blocking
 	if !m.isUIBlocked() {
 		m.handleResizeGrid(tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn)
 		m.handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn)
 		m.handleResourceViewer(viewResourcesBtn, loadResourceBtn)
-		m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn)
+		m.handleMapTools(paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn, itemsBtn)
 
 		// Center the grid in the window
 		maxVisibleWidth := MaxDisplayWidth * DefaultTileSize / m.uiState.tileSize
@@ -551,6 +552,9 @@ func (m *MapMaker) update() {
 						}
 					}
 					break
+				case "items":
+					// TODO: Initialize item editor
+					fmt.Println("Item editor not implemented yet")
 				}
 			}
 		}
@@ -566,7 +570,7 @@ func (m *MapMaker) update() {
 }
 
 // handleMapTools handles the selecting and swapping of tools
-func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconButton, eraseBtn IconButton, selectBtn IconButton, layersBtn IconButton, locationBtn IconButton, gridlinesBtn IconButton, npcBtn IconButton) {
+func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconButton, eraseBtn IconButton, selectBtn IconButton, layersBtn IconButton, locationBtn IconButton, gridlinesBtn IconButton, npcBtn IconButton, itemsBtn IconButton) {
 	if m.isIconButtonClicked(paintbrushBtn) {
 		if m.uiState.selectedTool == "paintbrush" {
 			m.uiState.selectedTool = ""
@@ -639,6 +643,14 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 		} else {
 			m.uiState.selectedTool = "npc"
 			m.showToast("NPC Editor tool selected", ToastInfo)
+		}
+	}
+	if m.isIconButtonClicked(itemsBtn) {
+		if m.uiState.selectedTool == "items" {
+			m.uiState.selectedTool = ""
+		} else {
+			m.uiState.selectedTool = "items"
+			m.showToast("Items Editor tool selected", ToastInfo)
 		}
 	}
 
@@ -888,7 +900,7 @@ func (m *MapMaker) loadResource(name string, filepath string, isSheet bool, shee
 	return nil
 }
 
-func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn IconButton) {
+func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBtn, widthLargerBtn, heightSmallerBtn, heightLargerBtn Button, loadBtn, saveBtn, loadResourceBtn, viewResourcesBtn, closeMapBtn, paintbrushBtn, paintbucketBtn, eraseBtn, selectBtn, layersBtn, locationBtn, gridlinesBtn, npcBtn, itemsButton IconButton) {
 	widthSmallerBtn = m.NewButton(10, 8, 30, 20, "-")
 	widthLargerBtn = m.NewButton(85, 8, 30, 20, "+")
 	heightSmallerBtn = m.NewButton(10, 33, 30, 20, "-")
@@ -1044,6 +1056,16 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		m.uiState.uiTextures["npc"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["npc"].Width), Height: float32(m.uiState.uiTextures["npc"].Height)},
 		"NPC Editor",
+	)
+
+	itemsButton = m.NewIconButton(
+		570,
+		15,
+		40,
+		30,
+		m.uiState.uiTextures["items"],
+		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["items"].Width), Height: float32(m.uiState.uiTextures["items"].Height)},
+		"Item Editor",
 	)
 
 	return
