@@ -39,13 +39,10 @@ type Item struct {
 	Texture     *AnimatedTexture
 
 	Equippable bool
-
 	Consumable bool
-	Effect     ConsumableEffect
-
-	Quantity  int
-	Stackable bool
-	MaxStack  int
+	Quantity   int
+	Stackable  bool
+	MaxStack   int
 
 	Stats        ItemStats
 	Requirements ItemRequirements
@@ -109,9 +106,8 @@ func (i *Item) AsEquipment(slot string, stats ItemStats) *Item {
 }
 
 // AsConsumable configures the item as consumable
-func (i *Item) AsConsumable(effect ConsumableEffect, stackable bool) *Item {
+func (i *Item) AsConsumable(stackable bool) *Item {
 	i.Type = ItemTypeConsumable
-	i.Effect = effect
 	i.Stackable = stackable
 	if stackable {
 		i.MaxStack = 99
@@ -119,13 +115,9 @@ func (i *Item) AsConsumable(effect ConsumableEffect, stackable bool) *Item {
 	return i
 }
 
-// ConsumableEffect represents what happens when an item is used
-type ConsumableEffect func(target interface{}) error
-
 // Consumable is an interface for items that can be used/consumed
 type Consumable interface {
 	Use(target interface{}) error
-	GetEffect() ConsumableEffect
 }
 
 // Helper methods for Items collection

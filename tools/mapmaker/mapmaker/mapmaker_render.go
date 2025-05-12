@@ -73,9 +73,11 @@ func (m *MapMaker) renderGrid() {
 
 				// Draw any items on the map
 				for _, item := range m.tileGrid.Items {
+					itemX := startX + (item.Position.X-viewStartX)*m.uiState.tileSize
+					itemY := startY + (item.Position.Y-viewStartY)*m.uiState.tileSize
 					m.resources.RenderItem(&item, rl.Rectangle{
-						X:      float32(item.Position.X * m.uiState.tileSize),
-						Y:      float32(item.Position.Y * m.uiState.tileSize),
+						X:      float32(itemX),
+						Y:      float32(itemY),
 						Width:  float32(m.uiState.tileSize),
 						Height: float32(m.uiState.tileSize),
 					}, m.uiState.tileSize)
@@ -2383,6 +2385,13 @@ func (m *MapMaker) renderItemEditor() {
 		if editor.id == "" || editor.name == "" {
 			rl.DrawText("ID and Name are required", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
 			return
+		}
+
+		for i := 0; i < frameCount; i++ {
+			if i >= len(editor.selectedFrames) || editor.selectedFrames[i] == "" {
+				rl.DrawText("All frames must have a texture assigned", int32(dialogX+20), int32(dialogY+dialogHeight-80), 16, rl.Red)
+				return
+			}
 		}
 
 		// Apply animation settings
