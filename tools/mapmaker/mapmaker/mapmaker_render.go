@@ -73,8 +73,8 @@ func (m *MapMaker) renderGrid() {
 
 				// Draw any items on the map
 				for _, item := range m.tileGrid.Items {
-					itemX := startX + (item.Position.X-viewStartX)*m.uiState.tileSize
-					itemY := startY + (item.Position.Y-viewStartY)*m.uiState.tileSize
+					itemX := startX + (item.Pos.X-viewStartX)*m.uiState.tileSize
+					itemY := startY + (item.Pos.Y-viewStartY)*m.uiState.tileSize
 					m.resources.RenderItem(&item, rl.Rectangle{
 						X:      float32(itemX),
 						Y:      float32(itemY),
@@ -2424,7 +2424,7 @@ func (m *MapMaker) renderItemEditor() {
 			Name:        editor.name,
 			Description: editor.description,
 			Type:        editor.itemType,
-			Position:    beam.Position{X: spawnX, Y: spawnY},
+			Pos:         beam.Position{X: spawnX, Y: spawnY},
 			Texture:     editor.texture,
 			Equippable:  editor.equippable,
 			Consumable:  editor.consumable,
@@ -2444,7 +2444,7 @@ func (m *MapMaker) renderItemEditor() {
 		// Check if an item already exists at this position
 		found := false
 		for i, existingItem := range m.tileGrid.Items {
-			if existingItem.Position.X == spawnX && existingItem.Position.Y == spawnY {
+			if existingItem.Pos.X == spawnX && existingItem.Pos.Y == spawnY {
 				// Update existing item
 				m.tileGrid.Items[i] = item
 				found = true

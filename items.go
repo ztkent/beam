@@ -35,7 +35,7 @@ type Item struct {
 	Name        string
 	Description string
 	Type        ItemType
-	Position    Position
+	Pos         Position
 	Texture     *AnimatedTexture
 
 	Equippable bool
@@ -132,7 +132,7 @@ func (items Items) FindByID(id string) *Item {
 
 func (items Items) FindByPosition(pos Position) *Item {
 	for i := range items {
-		if items[i].Position == pos {
+		if items[i].Pos == pos {
 			return &items[i]
 		}
 	}
