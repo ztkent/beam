@@ -2048,19 +2048,20 @@ func (m *MapMaker) renderNPCFrameSettings(editor *NPCEditorState, dialogX, dialo
 }
 
 type ItemEditorState struct {
-	visible     bool
-	spawnPos    beam.Position
-	id          string
-	name        string
-	description string
-	itemType    beam.ItemType
-	texture     *beam.AnimatedTexture
-	blocking    bool
-	equippable  bool
-	consumable  bool
-	stackable   bool
-	maxStack    string
-	quantity    string
+	visible       bool
+	spawnPos      beam.Position
+	id            string
+	name          string
+	description   string
+	itemType      beam.ItemType
+	equipmentType beam.EquipmentType
+	texture       *beam.AnimatedTexture
+	blocking      bool
+	equippable    bool
+	consumable    bool
+	stackable     bool
+	maxStack      string
+	quantity      string
 
 	// Stats
 	attack      string
@@ -2101,7 +2102,7 @@ func (m *MapMaker) renderItemEditor() {
 
 	// Dialog dimensions and position
 	dialogWidth := 800
-	dialogHeight := 650
+	dialogHeight := 750
 	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
 	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
 
@@ -2147,7 +2148,8 @@ func (m *MapMaker) renderItemEditor() {
 		rl.DrawRectangleRec(inputRect, rl.LightGray)
 		rl.DrawText(*value, int32(inputRect.X+5), int32(inputRect.Y+8), 16, rl.Black)
 
-		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), inputRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) &&
+			m.uiState.activeItemInput != "itemType" && m.uiState.activeItemInput != "equipmentType" {
 			m.uiState.activeItemInput = label
 		}
 
@@ -2282,17 +2284,34 @@ func (m *MapMaker) renderItemEditor() {
 		Height: float32(inputHeight),
 	}
 	rl.DrawRectangleRec(typeRect, rl.LightGray)
-	rl.DrawText(editor.name, int32(typeRect.X+5), int32(typeRect.Y+8), 16, rl.Black)
+	rl.DrawText(editor.itemType.String(), int32(typeRect.X+5), int32(typeRect.Y+8), 16, rl.Black)
 
+	// Handle item type dropdown
 	if rl.CheckCollisionPointRec(rl.GetMousePosition(), typeRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
-		if editor.itemType < beam.ItemTypeMisc {
-			editor.itemType++
-		} else {
-			editor.itemType = beam.ItemTypeEquipment
-		}
+		m.uiState.activeItemInput = "itemType"
 	}
 
 	y += inputHeight + padding
+	equipTypeRect := rl.Rectangle{
+		X:      float32(rightX + labelWidth),
+		Y:      float32(y),
+		Width:  float32(inputWidth),
+		Height: float32(inputHeight),
+	}
+	// Equipment type dropdown (only show if ItemTypeEquipment is selected)
+	if editor.itemType == beam.ItemTypeEquipment {
+		rl.DrawText("Type", int32(rightX), int32(y+8), 16, rl.Black)
+
+		rl.DrawRectangleRec(equipTypeRect, rl.LightGray)
+		rl.DrawText(editor.equipmentType.String(), int32(equipTypeRect.X+5), int32(equipTypeRect.Y+8), 16, rl.Black)
+
+		// Handle equipment type dropdown
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), equipTypeRect) && rl.IsMouseButtonPressed(rl.MouseLeftButton) && m.uiState.activeItemInput != "itemType" {
+			m.uiState.activeItemInput = "equipmentType"
+		}
+
+		y += inputHeight + padding
+	}
 
 	// Stats (only shown if equippable)
 	if editor.equippable {
@@ -2306,6 +2325,78 @@ func (m *MapMaker) renderItemEditor() {
 		y += inputHeight + padding
 		createItemInput("Level Req", &editor.levelReq, rightX, y, true)
 		y += inputHeight + padding
+	}
+
+	if m.uiState.activeItemInput == "equipmentType" {
+		dropdownHeight := float32(len(beam.AllEquipmentTypes()) * inputHeight)
+		dropdownRect := rl.Rectangle{
+			X:      equipTypeRect.X,
+			Y:      equipTypeRect.Y + equipTypeRect.Height,
+			Width:  equipTypeRect.Width,
+			Height: dropdownHeight,
+		}
+
+		rl.DrawRectangleRec(dropdownRect, rl.White)
+		rl.DrawRectangleLinesEx(dropdownRect, 1, rl.Gray)
+
+		for i, equipType := range beam.AllEquipmentTypes() {
+			itemRect := rl.Rectangle{
+				X:      dropdownRect.X,
+				Y:      dropdownRect.Y + float32(i*inputHeight),
+				Width:  dropdownRect.Width,
+				Height: float32(inputHeight),
+			}
+
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), itemRect) {
+				rl.DrawRectangleRec(itemRect, rl.LightGray)
+				if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+					editor.equipmentType = equipType
+					m.uiState.activeItemInput = ""
+				}
+			}
+			rl.DrawText(equipType.String(), int32(itemRect.X+5), int32(itemRect.Y+8), 16, rl.Black)
+		}
+	}
+
+	if m.uiState.activeItemInput == "itemType" {
+		dropdownHeight := float32(len(beam.AllItemTypes()) * inputHeight)
+		dropdownRect := rl.Rectangle{
+			X:      typeRect.X,
+			Y:      typeRect.Y + typeRect.Height,
+			Width:  typeRect.Width,
+			Height: dropdownHeight,
+		}
+
+		rl.DrawRectangleRec(dropdownRect, rl.White)
+		rl.DrawRectangleLinesEx(dropdownRect, 1, rl.Gray)
+
+		for i, itemType := range beam.AllItemTypes() {
+			itemRect := rl.Rectangle{
+				X:      dropdownRect.X,
+				Y:      dropdownRect.Y + float32(i*inputHeight),
+				Width:  dropdownRect.Width,
+				Height: float32(inputHeight),
+			}
+
+			if rl.CheckCollisionPointRec(rl.GetMousePosition(), itemRect) {
+				rl.DrawRectangleRec(itemRect, rl.LightGray)
+				if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+					editor.itemType = itemType
+					m.uiState.activeItemInput = ""
+				}
+			}
+			rl.DrawText(itemType.String(), int32(itemRect.X+5), int32(itemRect.Y+8), 16, rl.Black)
+		}
+	}
+
+	// Close dropdowns when clicking outside
+	if rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		mousePos := rl.GetMousePosition()
+		if m.uiState.activeItemInput == "itemType" || m.uiState.activeItemInput == "equipmentType" {
+			if !rl.CheckCollisionPointRec(mousePos, typeRect) && !rl.CheckCollisionPointRec(mousePos, equipTypeRect) {
+				m.uiState.activeItemInput = ""
+			}
+		}
 	}
 
 	// Inside the renderItemEditor function, after the item stats section:
@@ -2481,18 +2572,19 @@ func (m *MapMaker) renderItemEditor() {
 
 		// Create item data
 		item := beam.Item{
-			ID:          editor.id,
-			Name:        editor.name,
-			Description: editor.description,
-			Type:        editor.itemType,
-			Pos:         beam.Position{X: spawnX, Y: spawnY},
-			Texture:     editor.texture,
-			Blocking:    editor.blocking,
-			Equippable:  editor.equippable,
-			Consumable:  editor.consumable,
-			Stackable:   editor.stackable,
-			MaxStack:    maxStack,
-			Quantity:    quantity,
+			ID:            editor.id,
+			Name:          editor.name,
+			Description:   editor.description,
+			Type:          editor.itemType,
+			EquipmentType: editor.equipmentType,
+			Pos:           beam.Position{X: spawnX, Y: spawnY},
+			Texture:       editor.texture,
+			Blocking:      editor.blocking,
+			Equippable:    editor.equippable,
+			Consumable:    editor.consumable,
+			Stackable:     editor.stackable,
+			MaxStack:      maxStack,
+			Quantity:      quantity,
 			Stats: beam.ItemStats{
 				Attack:      attack,
 				Defense:     defense,
@@ -2624,6 +2716,7 @@ func (m *MapMaker) renderItemList() {
 				name:             item.Name,
 				description:      item.Description,
 				itemType:         item.Type,
+				equipmentType:    item.EquipmentType,
 				texture:          item.Texture,
 				blocking:         item.Blocking,
 				equippable:       item.Equippable,
