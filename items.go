@@ -24,7 +24,8 @@ Example usage:
 type ItemType int
 
 const (
-	ItemTypeEquipment ItemType = iota
+	ItemTypeNone ItemType = iota
+	ItemTypeEquipment
 	ItemTypeConsumable
 	ItemTypeQuestItem
 	ItemTypeResource
@@ -34,11 +35,76 @@ const (
 type EquipmentType int
 
 const (
-	EquipmentTypeWeapon EquipmentType = iota
+	EquipmentTypeNone EquipmentType = iota
+	EquipmentTypeWeapon
 	EquipmentTypeArmor
 	EquipmentTypeAccessory
 	EquipmentTypeShield
 )
+
+func (t ItemType) String() string {
+	switch t {
+	case ItemTypeEquipment:
+		return "Equipment"
+	case ItemTypeConsumable:
+		return "Consumable"
+	case ItemTypeQuestItem:
+		return "Quest Item"
+	case ItemTypeResource:
+		return "Resource"
+	case ItemTypeMisc:
+		return "Misc"
+	default:
+		return "None"
+	}
+}
+
+func (t EquipmentType) String() string {
+	switch t {
+	case EquipmentTypeWeapon:
+		return "Weapon"
+	case EquipmentTypeArmor:
+		return "Armor"
+	case EquipmentTypeAccessory:
+		return "Accessory"
+	case EquipmentTypeShield:
+		return "Shield"
+	default:
+		return "None"
+	}
+}
+
+func AllItemTypes() []ItemType {
+	return []ItemType{
+		ItemTypeNone,
+		ItemTypeEquipment,
+		ItemTypeConsumable,
+		ItemTypeQuestItem,
+		ItemTypeResource,
+		ItemTypeMisc,
+	}
+}
+
+func AllEquipmentTypes() []EquipmentType {
+	return []EquipmentType{
+		EquipmentTypeNone,
+		EquipmentTypeWeapon,
+		EquipmentTypeArmor,
+		EquipmentTypeAccessory,
+		EquipmentTypeShield,
+	}
+}
+
+type ItemStats struct {
+	Attack      int
+	Defense     int
+	AttackSpeed int
+	AttackRange int
+}
+
+type ItemRequirements struct {
+	Level int
+}
 
 // Item represents any item in the game world
 type Item struct {
@@ -62,17 +128,6 @@ type Item struct {
 	Requirements ItemRequirements
 
 	Removed bool
-}
-
-type ItemStats struct {
-	Attack      int
-	Defense     int
-	AttackSpeed int
-	AttackRange int
-}
-
-type ItemRequirements struct {
-	Level int
 }
 
 // Items is a collection of items with helper methods
