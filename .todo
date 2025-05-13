@@ -2,7 +2,6 @@
 
 ## Map Maker
 
-- create tool to place items.
-- item manage mode (delete edit like npcs)
+- fix the item type dropdown. it needs to select an actual item type option from beam.items
 
 - custom npc walk paths
