@@ -576,6 +576,7 @@ func (m *MapMaker) update() {
 							attack:                 "0",
 							defense:                "0",
 							attackSpeed:            "0",
+							attackRange:            "0",
 							levelReq:               "1",
 							itemType:               beam.ItemTypeMisc,
 							blocking:               true,

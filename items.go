@@ -1,5 +1,7 @@
 package beam
 
+import beam_math "github.com/ztkent/beam/math"
+
 /*
 The items system supports:
   - Equipment items with stats and level requirements
@@ -47,12 +49,15 @@ type Item struct {
 
 	Stats        ItemStats
 	Requirements ItemRequirements
+
+	Removed bool
 }
 
 type ItemStats struct {
 	Attack      int
 	Defense     int
 	AttackSpeed int
+	AttackRange int
 }
 
 type ItemRequirements struct {
@@ -64,11 +69,24 @@ type Items []Item
 
 func (items Items) IsBlocked(x, y int) bool {
 	for _, item := range items {
-		if item.Blocking && item.Pos.X == x && item.Pos.Y == y {
+		if !item.Removed && item.Blocking && item.Pos.X == x && item.Pos.Y == y {
 			return true
 		}
 	}
 	return false
+}
+
+func (items Items) EquippableNearby(playerPos Position) Items {
+	var equippableItems Items
+	for _, item := range items {
+		if !item.Removed && item.Equippable {
+			dist := beam_math.ManhattanDistance(item.Pos.X, item.Pos.Y, playerPos.X, playerPos.Y)
+			if dist <= 1 {
+				equippableItems = append(equippableItems, item)
+			}
+		}
+	}
+	return equippableItems
 }
 
 func NewItem(id string, name string, itemType ItemType) *Item {
