@@ -31,14 +31,25 @@ const (
 	ItemTypeMisc
 )
 
+type EquipmentType int
+
+const (
+	EquipmentTypeWeapon EquipmentType = iota
+	EquipmentTypeArmor
+	EquipmentTypeAccessory
+	EquipmentTypeShield
+)
+
 // Item represents any item in the game world
 type Item struct {
 	ID          string
 	Name        string
 	Description string
-	Type        ItemType
 	Pos         Position
 	Texture     *AnimatedTexture
+
+	Type          ItemType
+	EquipmentType EquipmentType
 
 	Blocking   bool
 	Equippable bool

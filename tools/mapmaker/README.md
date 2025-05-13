@@ -5,11 +5,6 @@ Design, save, and export game maps compatible with the Beam engine.
 
 ## Features
 
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/281bc0b1-f65f-4190-bfd6-65374e96658a" width="800" alt="Pixel Map Maker Demo">
-  </video>  
-</div>  
-
 ### Map Creation
 
 - Grid-based tile editor with resizable canvas
