@@ -155,6 +155,12 @@ func (items Items) EquippableNearby(playerPos Position) Items {
 	return equippableItems
 }
 
+func (items Items) Reset() {
+	for i := range items {
+		items[i].Removed = false
+	}
+}
+
 func NewItem(id string, name string, itemType ItemType) *Item {
 	return &Item{
 		ID:           id,
