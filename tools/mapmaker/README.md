@@ -5,6 +5,11 @@ Design, save, and export game maps compatible with the Beam engine.
 
 ## Features
 
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/4b2129a9-71b2-4c48-aba5-7d728739fb63" width="800" alt="Sprite Sheet Viewer Screenshot">
+  </video>  
+</div>  
+
 ### Map Creation
 
 - Grid-based tile editor with resizable canvas
