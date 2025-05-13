@@ -2066,6 +2066,7 @@ type ItemEditorState struct {
 	attack      string
 	defense     string
 	attackSpeed string
+	attackRange string
 
 	// Requirements
 	levelReq string
@@ -2301,6 +2302,8 @@ func (m *MapMaker) renderItemEditor() {
 		y += inputHeight + padding
 		createItemInput("Attack Speed", &editor.attackSpeed, rightX, y, true)
 		y += inputHeight + padding
+		createItemInput("Attack Range", &editor.attackRange, rightX, y, true)
+		y += inputHeight + padding
 		createItemInput("Level Req", &editor.levelReq, rightX, y, true)
 		y += inputHeight + padding
 	}
@@ -2434,6 +2437,7 @@ func (m *MapMaker) renderItemEditor() {
 		attack, _ := strconv.Atoi(editor.attack)
 		defense, _ := strconv.Atoi(editor.defense)
 		attackSpeed, _ := strconv.Atoi(editor.attackSpeed)
+		attackRange, _ := strconv.Atoi(editor.attackRange)
 		levelReq, _ := strconv.Atoi(editor.levelReq)
 		spawnX, _ := strconv.Atoi(editor.spawnXStr)
 		spawnY, _ := strconv.Atoi(editor.spawnYStr)
@@ -2493,6 +2497,7 @@ func (m *MapMaker) renderItemEditor() {
 				Attack:      attack,
 				Defense:     defense,
 				AttackSpeed: attackSpeed,
+				AttackRange: attackRange,
 			},
 			Requirements: beam.ItemRequirements{
 				Level: levelReq,
@@ -2629,6 +2634,7 @@ func (m *MapMaker) renderItemList() {
 				attack:           strconv.Itoa(item.Stats.Attack),
 				defense:          strconv.Itoa(item.Stats.Defense),
 				attackSpeed:      strconv.Itoa(item.Stats.AttackSpeed),
+				attackRange:      strconv.Itoa(item.Stats.AttackRange),
 				levelReq:         strconv.Itoa(item.Requirements.Level),
 				spawnXStr:        strconv.Itoa(item.Pos.X),
 				spawnYStr:        strconv.Itoa(item.Pos.Y),
