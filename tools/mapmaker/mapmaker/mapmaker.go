@@ -38,6 +38,7 @@ type UIState struct {
 	uiTextures      map[string]rl.Texture2D
 	activeTexture   *resources.TextureInfo
 	selectedTool    string
+	showGridlines   bool
 	// Active toast notification
 	toast *Toast
 
@@ -91,6 +92,7 @@ type UIState struct {
 	// Item Editor State
 	itemEditor      *ItemEditorState
 	activeItemInput string
+	showItemList    bool
 }
 
 type TileGrid struct {
@@ -663,12 +665,8 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 		}
 	}
 	if m.isIconButtonClicked(gridlinesBtn) {
-		if m.uiState.selectedTool == "gridlines" {
-			m.uiState.selectedTool = ""
-		} else {
-			m.uiState.selectedTool = "gridlines"
-			m.showToast("Gridlines tool selected", ToastInfo)
-		}
+		m.uiState.showGridlines = !m.uiState.showGridlines
+		m.showToast("Gridlines tool selected", ToastInfo)
 	}
 	if m.isIconButtonClicked(npcBtn) {
 		if m.uiState.selectedTool == "npc" {
@@ -735,6 +733,12 @@ func (m *MapMaker) handleMapTools(paintbrushBtn IconButton, paintbucketBtn IconB
 			// Handle NPC list view swap
 			if m.uiState.selectedTool == "npc" {
 				m.uiState.showNPCList = true
+				m.uiState.rightClickStartTime = 0
+			}
+
+			// Handle Item list view swap
+			if m.uiState.selectedTool == "items" {
+				m.uiState.showItemList = true
 				m.uiState.rightClickStartTime = 0
 			}
 
@@ -1078,7 +1082,7 @@ func (m *MapMaker) getUIButtons() (tileSmallerBtn, tileLargerBtn, widthSmallerBt
 		30,
 		m.uiState.uiTextures["gridlines"],
 		rl.Rectangle{X: 0, Y: 0, Width: float32(m.uiState.uiTextures["gridlines"].Width), Height: float32(m.uiState.uiTextures["gridlines"].Height)},
-		"Hide Gridlines",
+		"Gridlines",
 	)
 
 	npcBtn = m.NewIconButton(

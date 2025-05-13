@@ -327,11 +327,11 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 	}
 
 	// Draw special tile outlines
-	if m.uiState.selectedTool != "gridlines" && tile.Type == beam.WallTile {
+	if m.uiState.showGridlines && tile.Type == beam.WallTile {
 		rl.DrawRectangleLinesEx(pos, 2, rl.Brown)
 	}
 
-	if m.uiState.selectedTool != "gridlines" && pos2d.X != 0 && pos2d.Y != 0 {
+	if m.uiState.showGridlines && pos2d.X != 0 && pos2d.Y != 0 {
 		switch {
 		case pos2d.X == m.tileGrid.Start.X && pos2d.Y == m.tileGrid.Start.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Green)
@@ -400,6 +400,10 @@ func (m *MapMaker) renderUI() {
 		m.renderNPCList()
 	}
 
+	if m.uiState.showItemList {
+		m.renderItemList()
+	}
+
 	if m.uiState.itemEditor != nil && m.uiState.itemEditor.visible {
 		m.renderItemEditor()
 	}
@@ -442,7 +446,7 @@ func (m *MapMaker) drawToolIcons(paintbrushBtn, paintbucketBtn, eraseBtn, select
 		"items":        itemsBtn,
 	}
 	for toolName, btn := range toolButtons {
-		if m.uiState.selectedTool == toolName {
+		if m.uiState.selectedTool == toolName || (toolName == "gridlines" && m.uiState.showGridlines) {
 			// Draw selected border
 			rl.DrawRectangleLinesEx(rl.Rectangle{
 				X:      btn.rect.X - 1,
@@ -2514,6 +2518,146 @@ func (m *MapMaker) renderItemEditor() {
 		m.showToast("Item saved successfully!", ToastSuccess)
 		m.closeItemEditor()
 		return
+	}
+}
+
+// renderItemList renders the Item list view
+func (m *MapMaker) renderItemList() {
+	dialogWidth := 600
+	dialogHeight := 400
+	dialogX := (rl.GetScreenWidth() - dialogWidth) / 2
+	dialogY := (rl.GetScreenHeight() - dialogHeight) / 2
+
+	// Draw semi-transparent background
+	rl.DrawRectangle(0, 0, int32(rl.GetScreenWidth()), int32(rl.GetScreenHeight()), rl.Fade(rl.Black, 0.7))
+
+	// Draw dialog background
+	rl.DrawRectangle(int32(dialogX), int32(dialogY), int32(dialogWidth), int32(dialogHeight), rl.RayWhite)
+	rl.DrawRectangleLinesEx(rl.Rectangle{
+		X:      float32(dialogX),
+		Y:      float32(dialogY),
+		Width:  float32(dialogWidth),
+		Height: float32(dialogHeight),
+	}, 1, rl.Gray)
+
+	// Draw title
+	rl.DrawText("Item List", int32(dialogX+20), int32(dialogY+20), 24, rl.Black)
+
+	// Close button
+	closeBtn := rl.Rectangle{
+		X:      float32(dialogX + dialogWidth - 40),
+		Y:      float32(dialogY + 10),
+		Width:  30,
+		Height: 30,
+	}
+	rl.DrawRectangleRec(closeBtn, rl.LightGray)
+	rl.DrawText("X", int32(closeBtn.X+10), int32(closeBtn.Y+5), 20, rl.Black)
+
+	if rl.CheckCollisionPointRec(rl.GetMousePosition(), closeBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+		m.uiState.showItemList = false
+	}
+
+	// List content area
+	contentY := dialogY + 60
+	rowHeight := int32(40)
+	padding := int32(10)
+
+	// Draw headers
+	rl.DrawText("Name", int32(dialogX+20), int32(contentY), 20, rl.DarkGray)
+	rl.DrawText("Position", int32(dialogX+200), int32(contentY), 20, rl.DarkGray)
+	rl.DrawText("Type", int32(dialogX+300), int32(contentY), 20, rl.DarkGray)
+	rl.DrawText("Actions", int32(dialogX+400), int32(contentY), 20, rl.DarkGray)
+	contentY += 30
+
+	// Draw Item rows
+	for i, item := range m.tileGrid.Items {
+		y := int32(contentY) + int32(i)*rowHeight
+		rowBg := rl.White
+		if i%2 == 0 {
+			rowBg = rl.LightGray
+		}
+
+		// Draw row background
+		rl.DrawRectangle(
+			int32(dialogX)+10,
+			int32(y),
+			int32(dialogWidth)-20,
+			rowHeight-2,
+			rowBg,
+		)
+
+		// Draw Item info
+		rl.DrawText(item.Name, int32(dialogX+20), int32(y+10), 16, rl.Black)
+		rl.DrawText(fmt.Sprintf("(%d, %d)", item.Pos.X, item.Pos.Y), int32(dialogX+200), int32(y+10), 16, rl.Black)
+
+		// Edit button
+		editBtn := rl.Rectangle{
+			X:      float32(dialogX + 400),
+			Y:      float32(y + padding/2),
+			Width:  60,
+			Height: float32(rowHeight - padding),
+		}
+		rl.DrawRectangleRec(editBtn, rl.Blue)
+		rl.DrawText("Edit", int32(editBtn.X+15), int32(editBtn.Y+5), 16, rl.White)
+
+		// Delete button
+		deleteBtn := rl.Rectangle{
+			X:      float32(dialogX + 470),
+			Y:      float32(y + padding/2),
+			Width:  60,
+			Height: float32(rowHeight - padding),
+		}
+		rl.DrawRectangleRec(deleteBtn, rl.Red)
+		rl.DrawText("Delete", int32(deleteBtn.X+5), int32(deleteBtn.Y+5), 16, rl.White)
+
+		// Handle button clicks
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), editBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			m.uiState.itemEditor = &ItemEditorState{
+				visible:          true,
+				spawnPos:         item.Pos,
+				id:               item.ID,
+				name:             item.Name,
+				description:      item.Description,
+				itemType:         item.Type,
+				texture:          item.Texture,
+				blocking:         item.Blocking,
+				equippable:       item.Equippable,
+				consumable:       item.Consumable,
+				stackable:        item.Stackable,
+				maxStack:         strconv.Itoa(item.MaxStack),
+				quantity:         strconv.Itoa(item.Quantity),
+				attack:           strconv.Itoa(item.Stats.Attack),
+				defense:          strconv.Itoa(item.Stats.Defense),
+				attackSpeed:      strconv.Itoa(item.Stats.AttackSpeed),
+				levelReq:         strconv.Itoa(item.Requirements.Level),
+				spawnXStr:        strconv.Itoa(item.Pos.X),
+				spawnYStr:        strconv.Itoa(item.Pos.Y),
+				frameCountStr:    "1",
+				animationTimeStr: "0.5",
+				selectedFrames:   make([]string, 1),
+			}
+
+			// Initialize texture frames if they exist
+			if item.Texture != nil && len(item.Texture.Frames) > 0 {
+				m.uiState.itemEditor.frameCountStr = strconv.Itoa(len(item.Texture.Frames))
+				m.uiState.itemEditor.animationTimeStr = fmt.Sprintf("%.1f", item.Texture.AnimationTime)
+				m.uiState.itemEditor.selectedFrames = make([]string, len(item.Texture.Frames))
+				for i, frame := range item.Texture.Frames {
+					m.uiState.itemEditor.selectedFrames[i] = frame.Name
+				}
+			}
+
+			m.uiState.showItemList = false
+		}
+
+		if rl.CheckCollisionPointRec(rl.GetMousePosition(), deleteBtn) && rl.IsMouseButtonPressed(rl.MouseLeftButton) {
+			// Remove the Item
+			m.tileGrid.Items = append(m.tileGrid.Items[:i], m.tileGrid.Items[i+1:]...)
+		}
+	}
+
+	if len(m.tileGrid.Items) == 0 {
+		rl.DrawText("No Items placed on the map", int32(dialogX+200), int32(contentY+20), 20, rl.Gray)
 	}
 }
 
