@@ -68,6 +68,15 @@ func (npcs NPCs) LivingNPCs() NPCs {
 	return targets
 }
 
+func (npcs NPCs) IsInteracting() bool {
+	for _, e := range npcs {
+		if e.Data.IsInteracting {
+			return true
+		}
+	}
+	return false
+}
+
 func (npcs NPCs) InteractableNearby(playerPos Position) NPCs {
 	targets := make(NPCs, 0)
 	for _, e := range npcs {
@@ -143,7 +152,7 @@ func NewSimpleNPCTexture(name string) *NPCTexture {
 }
 
 // Run the NPC update loop.
-func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
+func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
 	if npc.Data.Dead {
 		totalDyingFrames := 32
 		npc.Data.DyingFrames++
@@ -154,7 +163,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 		totalDamageFrames := 32
 		npc.Data.DamageFrames++
 		if npc.Data.DamageFrames == 1 {
-			npc.knockback(tiles, 1)
+			npc.knockback(currMap.Tiles, 1)
 		}
 		if npc.Data.DamageFrames >= int(totalDamageFrames) {
 			npc.Data.DamageFrames = 0
@@ -171,7 +180,7 @@ func (npc *NPC) Update(playerPos Position, tiles [][]Tile) (died bool) {
 		return false
 	}
 
-	npc.Wander(playerPos, tiles)
+	npc.Wander(playerPos, currMap)
 	return false
 }
 
@@ -216,7 +225,7 @@ func (npc *NPC) Interact(playerPos Position, currChat *chat.Chat) {
 // A simple wandering algo that moves the NPC towards the player if within aggro range.
 // If not, it will wander randomly. The NPC will also check for obstacles.
 // The NPC will try to stay within its wander range, if possible.
-func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
+func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 	currentTime := float32(rl.GetTime())
 	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < float32(npc.Data.MoveSpeed)) {
 		return
@@ -237,9 +246,9 @@ func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 		for _, dir := range directions {
 			newX := npc.Pos.X + dir.X
 			newY := npc.Pos.Y + dir.Y
-			if newX > 0 && newX < len(tiles[0])-1 &&
-				newY > 0 && newY < len(tiles)-1 &&
-				tiles[newY][newX].Type == FloorTile {
+			if newX > 0 && newX < len(currMap.Tiles[0])-1 &&
+				newY > 0 && newY < len(currMap.Tiles)-1 &&
+				currMap.Tiles[newY][newX].Type == FloorTile {
 				dx, dy = dir.X, dir.Y
 				break
 			}
@@ -254,8 +263,8 @@ func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 				dx = beam_math.Sign(xDiff)
 				dy = 0
 				newX := npc.Pos.X + dx
-				if newX <= 0 || newX >= len(tiles[0])-1 ||
-					tiles[npc.Pos.Y][newX].Type != FloorTile {
+				if newX <= 0 || newX >= len(currMap.Tiles[0])-1 ||
+					currMap.Tiles[npc.Pos.Y][newX].Type != FloorTile {
 					dx = 0
 					dy = beam_math.Sign(yDiff)
 				}
@@ -263,8 +272,8 @@ func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 				dy = beam_math.Sign(yDiff)
 				dx = 0
 				newY := npc.Pos.Y + dy
-				if newY <= 0 || newY >= len(tiles)-1 ||
-					tiles[newY][npc.Pos.X].Type != FloorTile {
+				if newY <= 0 || newY >= len(currMap.Tiles)-1 ||
+					currMap.Tiles[newY][npc.Pos.X].Type != FloorTile {
 					dy = 0
 					dx = beam_math.Sign(xDiff)
 				}
@@ -328,9 +337,12 @@ func (npc *NPC) Wander(playerPos Position, tiles [][]Tile) {
 
 	newX := npc.Pos.X + dx
 	newY := npc.Pos.Y + dy
-	if newX > 0 && newX < len(tiles[0])-1 &&
-		newY > 0 && newY < len(tiles)-1 &&
-		tiles[newY][newX].Type == FloorTile {
+	if newX > 0 && newX < len(currMap.Tiles[0])-1 &&
+		newY > 0 && newY < len(currMap.Tiles)-1 &&
+		currMap.Tiles[newY][newX].Type != WallTile &&
+		currMap.Tiles[newY][newX].Type != ChestTile &&
+		!currMap.NPCs.IsBlocked(newX, newY) &&
+		!currMap.Items.IsBlocked(newX, newY) {
 		npc.Pos.X = newX
 		npc.Pos.Y = newY
 	}

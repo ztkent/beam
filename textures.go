@@ -48,6 +48,7 @@ type Texture struct {
 	Tint     rl.Color
 	MirrorX  bool
 	MirrorY  bool
+	Origin   rl.Vector2
 }
 
 // Layers for rendering -

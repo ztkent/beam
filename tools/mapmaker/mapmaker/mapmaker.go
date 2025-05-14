@@ -601,7 +601,7 @@ func (m *MapMaker) update() {
 		npc.Update(beam.Position{
 			X: -1,
 			Y: -1,
-		}, m.tileGrid.Tiles)
+		}, &m.tileGrid.Map)
 	}
 }
 

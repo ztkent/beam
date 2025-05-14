@@ -19,6 +19,10 @@ func (rm *ResourceManager) RenderTexture(texture *beam.AnimatedTexture, pos rl.R
 				X: float32(tileSize) / 2,
 				Y: float32(tileSize) / 2,
 			}
+			if frame.Origin != (rl.Vector2{}) {
+				origin = frame.Origin
+			}
+
 			info, err := rm.GetTexture("default", frame.Name)
 			if err != nil {
 				fmt.Println("Error getting texture:", err)
