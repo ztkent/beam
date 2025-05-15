@@ -78,8 +78,8 @@ func (m *MapMaker) renderGrid() {
 					m.resources.RenderItem(&item, rl.Rectangle{
 						X:      float32(itemX),
 						Y:      float32(itemY),
-						Width:  float32(m.uiState.tileSize),
-						Height: float32(m.uiState.tileSize),
+						Width:  float32(m.uiState.tileSize) * .75,
+						Height: float32(m.uiState.tileSize) * .75,
 					}, m.uiState.tileSize)
 				}
 			}
