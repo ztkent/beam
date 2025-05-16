@@ -44,7 +44,7 @@ type Audio struct {
 // You can also add new audio views to the manager, and load/unload them as needed.
 func NewAudioManagerWithGlobal(defaultMusic []Audio, defaultSounds []Audio) *AudioManager {
 	am := &AudioManager{
-		Volume: 1.0,
+		Volume: .5,
 		Views:  make([]AudioView, 0),
 	}
 	am.AddAudioView("default", defaultMusic, defaultSounds)
