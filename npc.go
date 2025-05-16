@@ -39,6 +39,7 @@ Example usage:
 */
 
 type NPCTexture struct {
+	Idle  *AnimatedTexture
 	Up    *AnimatedTexture
 	Down  *AnimatedTexture
 	Left  *AnimatedTexture
@@ -163,7 +164,7 @@ func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
 		totalDamageFrames := 32
 		npc.Data.DamageFrames++
 		if npc.Data.DamageFrames == 1 {
-			npc.knockback(currMap.Tiles, 1)
+			npc.knockback(playerPos, currMap.Tiles, 1)
 		}
 		if npc.Data.DamageFrames >= int(totalDamageFrames) {
 			npc.Data.DamageFrames = 0
@@ -366,6 +367,17 @@ func (npc *NPC) Attack(playerPos Position) (hit bool) {
 	}
 	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
 	if dist <= int(math.Round(npc.Data.AttackRange)) {
+		// Face the player before attacking
+		if playerPos.X > npc.Pos.X {
+			npc.Data.Direction = DirRight
+		} else if playerPos.X < npc.Pos.X {
+			npc.Data.Direction = DirLeft
+		} else if playerPos.Y > npc.Pos.Y {
+			npc.Data.Direction = DirDown
+		} else if playerPos.Y < npc.Pos.Y {
+			npc.Data.Direction = DirUp
+		}
+
 		if time.Since(npc.LastActionTime) > time.Duration(npc.Data.AttackSpeed*1000)*time.Millisecond {
 			npc.LastActionTime = time.Now()
 			return true
@@ -390,7 +402,7 @@ func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
 }
 
 // Knockback the NPC in the opposite direction theyre facing
-func (npc *NPC) knockback(tiles [][]Tile, dist int) {
+func (npc *NPC) knockback(playerPos Position, tiles [][]Tile, dist int) {
 	height := len(tiles)
 	width := 0
 	if height > 0 {
@@ -443,4 +455,15 @@ func (npc *NPC) knockback(tiles [][]Tile, dist int) {
 	tiles[npc.Pos.Y][npc.Pos.X].Type = FloorTile
 	npc.Pos.X = tempX
 	npc.Pos.Y = tempY
+
+	// Face the player after knockback
+	if playerPos.X > npc.Pos.X {
+		npc.Data.Direction = DirRight
+	} else if playerPos.X < npc.Pos.X {
+		npc.Data.Direction = DirLeft
+	} else if playerPos.Y > npc.Pos.Y {
+		npc.Data.Direction = DirDown
+	} else if playerPos.Y < npc.Pos.Y {
+		npc.Data.Direction = DirUp
+	}
 }
