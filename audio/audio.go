@@ -244,7 +244,7 @@ func (am *AudioManager) PlaySound(viewName, soundName string) error {
 				if view.SFX[i].Name == soundName {
 					sound := view.SFX[i]
 					if sound.Loaded {
-						rl.SetSoundVolume(sound.Sound, am.Volume+am.Volume*1.15)
+						rl.SetSoundVolume(sound.Sound, am.Volume)
 						rl.PlaySound(sound.Sound)
 					}
 					return nil
