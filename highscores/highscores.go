@@ -6,6 +6,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"time"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 // HighScore represents a single score entry with its metadata
 type HighScore struct {
 	Score    int
-	Duration float32
+	Duration time.Duration
 	Date     string
 }
 
@@ -80,13 +81,14 @@ func (m *HighScoreManager) Load() error {
 		if err != nil {
 			continue
 		}
-		duration, err := strconv.ParseFloat(record[1], 32)
+		// Parse duration as nanoseconds (int64)
+		durationNanos, err := strconv.ParseInt(record[1], 10, 64)
 		if err != nil {
 			continue
 		}
 		m.Scores = append(m.Scores, HighScore{
 			Score:    score,
-			Duration: float32(duration),
+			Duration: time.Duration(durationNanos),
 			Date:     record[2],
 		})
 	}
@@ -111,7 +113,7 @@ func (m *HighScoreManager) Save() error {
 	for i := 0; i < limit; i++ {
 		record := []string{
 			strconv.Itoa(m.Scores[i].Score),
-			fmt.Sprintf("%.1f", m.Scores[i].Duration),
+			strconv.FormatInt(int64(m.Scores[i].Duration), 10),
 			m.Scores[i].Date,
 		}
 		if err := writer.Write(record); err != nil {
