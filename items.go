@@ -100,6 +100,24 @@ type ItemStats struct {
 	Defense     int
 	AttackSpeed int
 	AttackRange int
+	Effects     []ItemEffect
+}
+
+type EffectType int
+
+const (
+	EffectNone EffectType = iota
+	EffectHealth
+	EffectSpeed
+	EffectAttack
+)
+
+type ItemEffect struct {
+	ID            int64
+	Type          EffectType
+	Value         float64
+	Duration      float64
+	TimeRemaining float64
 }
 
 type ItemRequirements struct {
@@ -131,7 +149,7 @@ type Item struct {
 }
 
 // Items is a collection of items with helper methods
-type Items []Item
+type Items []*Item
 
 func (items Items) IsBlocked(x, y int) bool {
 	for _, item := range items {
@@ -212,6 +230,7 @@ func (i *Item) AsConsumable(stackable bool) *Item {
 	if stackable {
 		i.MaxStack = 99
 	}
+	i.Consumable = true
 	return i
 }
 
@@ -224,7 +243,7 @@ type Consumable interface {
 func (items Items) FindByID(id string) *Item {
 	for i := range items {
 		if items[i].ID == id {
-			return &items[i]
+			return items[i]
 		}
 	}
 	return nil
@@ -233,7 +252,7 @@ func (items Items) FindByID(id string) *Item {
 func (items Items) FindByPosition(pos Position) *Item {
 	for i := range items {
 		if items[i].Pos == pos {
-			return &items[i]
+			return items[i]
 		}
 	}
 	return nil

@@ -75,7 +75,7 @@ func (m *MapMaker) renderGrid() {
 				for _, item := range m.tileGrid.Items {
 					itemX := startX + (item.Pos.X-viewStartX)*m.uiState.tileSize
 					itemY := startY + (item.Pos.Y-viewStartY)*m.uiState.tileSize
-					m.resources.RenderItem(&item, rl.Rectangle{
+					m.resources.RenderItem(item, rl.Rectangle{
 						X:      float32(itemX),
 						Y:      float32(itemY),
 						Width:  float32(m.uiState.tileSize) * .75,
@@ -2601,7 +2601,7 @@ func (m *MapMaker) renderItemEditor() {
 		for i, existingItem := range m.tileGrid.Items {
 			if existingItem.Pos.X == spawnX && existingItem.Pos.Y == spawnY {
 				// Update existing item
-				m.tileGrid.Items[i] = item
+				m.tileGrid.Items[i] = &item
 				found = true
 				break
 			}
@@ -2609,7 +2609,7 @@ func (m *MapMaker) renderItemEditor() {
 
 		if !found {
 			// Add new item to the map
-			m.tileGrid.Items = append(m.tileGrid.Items, item)
+			m.tileGrid.Items = append(m.tileGrid.Items, &item)
 		}
 
 		m.showToast("Item saved successfully!", ToastSuccess)
