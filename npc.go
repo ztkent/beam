@@ -3,7 +3,6 @@ package beam
 import (
 	"math"
 	"math/rand"
-	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/ztkent/beam/chat"
@@ -92,11 +91,9 @@ func (npcs NPCs) InteractableNearby(playerPos Position) NPCs {
 }
 
 type NPC struct {
-	Pos            Position
-	LastMoveTime   float32
-	LastActionTime time.Time
-	Data           NPCData
-	CurrentChat    *chat.Chat
+	Pos         Position
+	Data        NPCData
+	CurrentChat *chat.Chat
 }
 
 type NPCData struct {
@@ -104,20 +101,22 @@ type NPCData struct {
 	Texture  *NPCTexture
 	SpawnPos Position
 
-	Health           int
-	MaxHealth        int
+	LastMoveTime     float32
 	LastHealthChange float32
-	LastAttackTime   time.Time
-	Attack           int
-	BaseAttack       int
-	Defense          int
-	BaseDefense      int
-	AttackSpeed      float64
-	BaseAttackSpeed  float64
-	AttackRange      float64
-	BaseAttackRange  float64
-	MoveSpeed        float64
-	Direction        Direction
+	LastAttackTime   float32
+
+	Health          int
+	MaxHealth       int
+	Attack          int
+	BaseAttack      int
+	Defense         int
+	BaseDefense     int
+	AttackSpeed     float64
+	BaseAttackSpeed float64
+	AttackRange     float64
+	BaseAttackRange float64
+	MoveSpeed       float64
+	Direction       Direction
 
 	Attackable          bool
 	Impassable          bool
@@ -228,7 +227,7 @@ func (npc *NPC) Interact(playerPos Position, currChat *chat.Chat) {
 // The NPC will try to stay within its wander range, if possible.
 func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 	currentTime := float32(rl.GetTime())
-	if npc.LastMoveTime < currentTime && (currentTime-npc.LastMoveTime < float32(npc.Data.MoveSpeed)) {
+	if npc.Data.MoveSpeed <= 0 || ((currentTime - npc.Data.LastMoveTime) < 1.0/float32(npc.Data.MoveSpeed)) {
 		return
 	}
 
@@ -357,7 +356,7 @@ func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 	} else if dy < 0 {
 		npc.Data.Direction = DirUp
 	}
-	npc.LastMoveTime = currentTime
+	npc.Data.LastMoveTime = currentTime
 }
 
 // Attack the player if within attack range and the NPC is hostile.
@@ -378,8 +377,9 @@ func (npc *NPC) Attack(playerPos Position) (hit bool) {
 			npc.Data.Direction = DirUp
 		}
 
-		if time.Since(npc.LastActionTime) > time.Duration(npc.Data.AttackSpeed*1000)*time.Millisecond {
-			npc.LastActionTime = time.Now()
+		currentTime := float32(rl.GetTime())
+		if npc.Data.AttackSpeed > 0 && (currentTime-npc.Data.LastAttackTime) > (1.0/float32(npc.Data.AttackSpeed)) {
+			npc.Data.LastAttackTime = currentTime
 			return true
 		}
 	}
