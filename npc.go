@@ -132,6 +132,7 @@ type NPCData struct {
 
 	Interactable  bool
 	IsInteracting bool
+	Experience    int
 }
 
 func NewSimpleNPCTexture(name string) *NPCTexture {
