@@ -807,6 +807,8 @@ func (m *MapMaker) handleSaveLoadClose(saveBtn, loadBtn, closeMapBtn IconButton)
 			m.uiState.tileSize = DefaultTileSize
 			m.uiState.gridWidth = DefaultGridWidth
 			m.uiState.gridHeight = DefaultGridHeight
+			m.tileGrid.Map.NPCs = beam.NPCs{}
+			m.tileGrid.Map.Items = beam.Items{}
 
 			m.showResourceViewer = false
 			m.uiState.resourceViewerScroll = 0
