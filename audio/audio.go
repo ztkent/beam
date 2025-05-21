@@ -2,6 +2,9 @@ package audio
 
 import (
 	"fmt"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -310,4 +313,78 @@ func LoadSound(name string, path string) *Sound {
 		Sound:  sound,
 		Loaded: true,
 	}
+}
+
+// NormalizeSettings holds the parameters for ffmpeg's loudnorm filter.
+type NormalizeSettings struct {
+	IntegratedLoudness float64 // Target integrated loudness in LUFS (e.g., -23.0)
+	TruePeak           float64 // Target true peak in dBTP (e.g., -2.0)
+	LoudnessRange      float64 // Target loudness range in LU (e.g., 7.0)
+}
+
+// DefaultNormalizeSettings provides common normalization parameters (EBU R128).
+var DefaultNormalizeSettings = NormalizeSettings{
+	IntegratedLoudness: -23.0,
+	TruePeak:           -2.0,
+	LoudnessRange:      7.0,
+}
+
+// NormalizeAudioFiles processes a list of audio files using ffmpeg's loudnorm filter.
+// It creates new files with the suffix "_normalized" before the extension
+func NormalizeAudioFiles(inputFilePaths []string, settings *NormalizeSettings) ([]string, error) {
+	if len(inputFilePaths) == 0 {
+		return nil, fmt.Errorf("no input files provided for normalization")
+	}
+
+	ffmpegPath, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return nil, fmt.Errorf("ffmpeg command not found in system PATH: %w", err)
+	}
+
+	currentSettings := DefaultNormalizeSettings
+	if settings != nil {
+		currentSettings = *settings
+	}
+
+	var cmdArgs []string
+	var filterComplexParts []string
+	var outputNormalizedFiles []string
+
+	// Automatically overwrite output files if they exist
+	cmdArgs = append(cmdArgs, "-y")
+
+	// Prepare -i arguments and output file names
+	for i, inputPath := range inputFilePaths {
+		cmdArgs = append(cmdArgs, "-i", inputPath)
+
+		dir := filepath.Dir(inputPath)
+		base := filepath.Base(inputPath)
+		ext := filepath.Ext(base)
+		nameWithoutExt := strings.TrimSuffix(base, ext)
+		outputPath := filepath.Join(dir, fmt.Sprintf("%s_normalized%s", nameWithoutExt, ext))
+		outputNormalizedFiles = append(outputNormalizedFiles, outputPath)
+
+		filterComplexParts = append(filterComplexParts,
+			fmt.Sprintf("[%d:a]loudnorm=I=%.1f:TP=%.1f:LRA=%.1f[norm%d]",
+				i, currentSettings.IntegratedLoudness, currentSettings.TruePeak, currentSettings.LoudnessRange, i))
+	}
+
+	// Add filter_complex argument
+	if len(filterComplexParts) > 0 {
+		cmdArgs = append(cmdArgs, "-filter_complex", strings.Join(filterComplexParts, ";"))
+	}
+
+	// Prepare -map arguments for each output file
+	for i, outputPath := range outputNormalizedFiles {
+		cmdArgs = append(cmdArgs, "-map", fmt.Sprintf("[norm%d]", i), outputPath)
+	}
+
+	cmd := exec.Command(ffmpegPath, cmdArgs...)
+
+	cmdOutput, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("ffmpeg execution failed: %w\nffmpeg output:\n%s", err, string(cmdOutput))
+	}
+
+	return outputNormalizedFiles, nil
 }
