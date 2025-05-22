@@ -469,6 +469,7 @@ func (npc *NPC) Attack(playerPos Position) (hit bool) {
 
 		if (currentTime - npc.Data.LastAttackTime) >= attackCooldown {
 			npc.Data.LastAttackTime = currentTime
+			npc.Data.LastMoveTime = currentTime
 			npc.Data.AttackState = AttackStart
 			npc.Data.AttackStateTime = 0
 			npc.Data.IsIdle = false
@@ -520,7 +521,10 @@ func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
 	}
 
 	// Priority: Attack > Idle > Base
-	isAttacking := npc.Data.AttackState != AttackIdle
+	currentTime := float32(rl.GetTime())
+
+	// Don't swap to idle immediately after finishing a long attack
+	isAttacking := (npc.Data.AttackState != AttackIdle) || (currentTime-npc.Data.LastAttackTime < 2.0)
 	if isAttacking && attack != nil {
 		return attack
 	}
