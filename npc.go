@@ -122,8 +122,12 @@ type NPC struct {
 }
 
 type NPCData struct {
-	Name     string
-	Texture  *NPCTexture
+	Name string
+
+	Texture       *NPCTexture
+	IdleTexture   *NPCTexture
+	AttackTexture *NPCTexture
+
 	SpawnPos Position
 
 	LastMoveTime     float32
@@ -141,7 +145,9 @@ type NPCData struct {
 	AttackRange     float64
 	BaseAttackRange float64
 	MoveSpeed       float64
-	Direction       Direction
+
+	Direction Direction
+	IsIdle    bool
 
 	Attackable          bool
 	Impassable          bool
@@ -206,14 +212,10 @@ func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
 		return false
 	}
 
-	// Update attack state timing only if not dead or interacting
 	npc.updateAttackState()
-
 	if npc.Data.AttackState == AttackIdle {
 		npc.Wander(playerPos, currMap)
 	}
-
-	npc.Wander(playerPos, currMap)
 	return false
 }
 
@@ -303,6 +305,7 @@ func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 	}
 
 	// Calculate distance to player
+	startPos := Position{X: npc.Pos.X, Y: npc.Pos.Y}
 	distToPlayer := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
 	distToSpawn := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, npc.Data.SpawnPos.X, npc.Data.SpawnPos.Y)
 	var dx, dy int
@@ -427,7 +430,14 @@ func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 	} else if dy < 0 {
 		npc.Data.Direction = DirUp
 	}
-	npc.Data.LastMoveTime = currentTime
+
+	idleThreshold := float32(3.0)
+	if npc.Pos.X != startPos.X || npc.Pos.Y != startPos.Y {
+		npc.Data.LastMoveTime = currentTime
+		npc.Data.IsIdle = false
+	} else if currentTime-npc.Data.LastMoveTime > idleThreshold {
+		npc.Data.IsIdle = true
+	}
 }
 
 // Attack the player if within attack range and the NPC is hostile.
