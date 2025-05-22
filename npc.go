@@ -9,6 +9,9 @@ import (
 	beam_math "github.com/ztkent/beam/math"
 )
 
+// TODO: add idle animations
+// add attack animations
+
 /*
 The NPC system supports:
   - Wandering NPCs with customizable behavior
@@ -38,12 +41,34 @@ Example usage:
 */
 
 type NPCTexture struct {
-	Idle  *AnimatedTexture
 	Up    *AnimatedTexture
 	Down  *AnimatedTexture
 	Left  *AnimatedTexture
 	Right *AnimatedTexture
 }
+
+// AttackState represents the different stages of an NPC's attack.
+type AttackState int
+
+const (
+	// AttackIdle means the NPC is not currently attacking.
+	AttackIdle AttackState = iota
+	// AttackStart is the wind-up phase of an attack.
+	AttackStart
+	// AttackMid is the active part of the attack.
+	AttackMid
+	// AttackEnd is the recovery phase after an attack.
+	AttackEnd
+)
+
+const (
+	// AttackAnimProportionOfCooldown defines how much of the attack cooldown is used for the animation.
+	AttackAnimProportionOfCooldown = 0.8 // 80%
+	AttackStartProportion          = 0.25
+	AttackMidProportion            = 0.35
+	AttackEndProportion            = 0.40
+	MinAttackPhaseDuration         = 0.05 // seconds
+)
 
 type NPCs []*NPC
 
@@ -123,7 +148,7 @@ type NPCData struct {
 	Hostile             bool
 	WanderRange         int
 	AggroRange          int
-	AttackState         int
+	AttackState         AttackState
 	AttackStateTime     float32
 	TookDamageThisFrame bool
 	DamageFrames        int
@@ -181,8 +206,53 @@ func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
 		return false
 	}
 
+	// Update attack state timing only if not dead or interacting
+	npc.updateAttackState()
+
+	if npc.Data.AttackState == AttackIdle {
+		npc.Wander(playerPos, currMap)
+	}
+
 	npc.Wander(playerPos, currMap)
 	return false
+}
+
+func (npc *NPC) updateAttackState() {
+	if npc.Data.AttackState != AttackIdle {
+		npc.Data.AttackStateTime += rl.GetFrameTime()
+		var currentPhaseExpectedDuration float32
+
+		switch npc.Data.AttackState {
+		case AttackStart:
+			currentPhaseExpectedDuration = calculateAttackPhaseDuration(npc.Data.AttackSpeed, AttackStartProportion)
+			if npc.Data.AttackStateTime >= currentPhaseExpectedDuration {
+				npc.Data.AttackState = AttackMid
+				npc.Data.AttackStateTime = 0
+			}
+		case AttackMid:
+			currentPhaseExpectedDuration = calculateAttackPhaseDuration(npc.Data.AttackSpeed, AttackMidProportion)
+			if npc.Data.AttackStateTime >= currentPhaseExpectedDuration {
+				npc.Data.AttackState = AttackEnd
+				npc.Data.AttackStateTime = 0
+			}
+		case AttackEnd:
+			currentPhaseExpectedDuration = calculateAttackPhaseDuration(npc.Data.AttackSpeed, AttackEndProportion)
+			if npc.Data.AttackStateTime >= currentPhaseExpectedDuration {
+				npc.Data.AttackState = AttackIdle
+				npc.Data.AttackStateTime = 0
+			}
+		}
+	}
+}
+
+func calculateAttackPhaseDuration(attackSpeed float64, phaseProportion float32) float32 {
+	if attackSpeed <= 0 {
+		return MinAttackPhaseDuration * 3
+	}
+	totalCooldown := float32(1.0 / attackSpeed)
+	totalAnimationTime := totalCooldown * AttackAnimProportionOfCooldown
+	calculatedDuration := totalAnimationTime * phaseProportion
+	return float32(math.Max(float64(MinAttackPhaseDuration), float64(calculatedDuration)))
 }
 
 // Interact with a player
@@ -362,9 +432,10 @@ func (npc *NPC) Wander(playerPos Position, currMap *Map) {
 
 // Attack the player if within attack range and the NPC is hostile.
 func (npc *NPC) Attack(playerPos Position) (hit bool) {
-	if !npc.Data.Hostile || npc.Data.Dead {
+	if !npc.Data.Hostile || npc.Data.Dead || npc.Data.AttackState != AttackIdle {
 		return false
 	}
+
 	dist := beam_math.ManhattanDistance(npc.Pos.X, npc.Pos.Y, playerPos.X, playerPos.Y)
 	if dist <= int(math.Round(npc.Data.AttackRange)) {
 		// Face the player before attacking
@@ -379,9 +450,18 @@ func (npc *NPC) Attack(playerPos Position) (hit bool) {
 		}
 
 		currentTime := float32(rl.GetTime())
-		if npc.Data.AttackSpeed > 0 && (currentTime-npc.Data.LastAttackTime) > (1.0/float32(npc.Data.AttackSpeed)) {
+		attackCooldown := float32(0.0)
+		if npc.Data.AttackSpeed > 0 {
+			attackCooldown = 1.0 / float32(npc.Data.AttackSpeed)
+		} else {
+			attackCooldown = 60
+		}
+
+		if (currentTime - npc.Data.LastAttackTime) >= attackCooldown {
 			npc.Data.LastAttackTime = currentTime
-			return true
+			npc.Data.AttackState = AttackStart
+			npc.Data.AttackStateTime = 0
+			return true // Attack is successful
 		}
 	}
 	return false
