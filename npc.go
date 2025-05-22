@@ -471,25 +471,63 @@ func (npc *NPC) Attack(playerPos Position) (hit bool) {
 			npc.Data.LastAttackTime = currentTime
 			npc.Data.AttackState = AttackStart
 			npc.Data.AttackStateTime = 0
-			return true // Attack is successful
+			npc.Data.IsIdle = false
+			return true
 		}
 	}
 	return false
 }
 
+// GetCurrentTexture returns the appropriate AnimatedTexture for the NPC
+// based on its direction, idle, and attacking state.
 func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
+	var base, idle, attack *AnimatedTexture
 	switch npc.Data.Direction {
 	case DirUp:
-		return npc.Data.Texture.Up
+		base = npc.Data.Texture.Up
+		if npc.Data.IdleTexture != nil {
+			idle = npc.Data.IdleTexture.Up
+		}
+		if npc.Data.AttackTexture != nil {
+			attack = npc.Data.AttackTexture.Up
+		}
 	case DirDown:
-		return npc.Data.Texture.Down
+		base = npc.Data.Texture.Down
+		if npc.Data.IdleTexture != nil {
+			idle = npc.Data.IdleTexture.Down
+		}
+		if npc.Data.AttackTexture != nil {
+			attack = npc.Data.AttackTexture.Down
+		}
 	case DirLeft:
-		return npc.Data.Texture.Left
+		base = npc.Data.Texture.Left
+		if npc.Data.IdleTexture != nil {
+			idle = npc.Data.IdleTexture.Left
+		}
+		if npc.Data.AttackTexture != nil {
+			attack = npc.Data.AttackTexture.Left
+		}
 	case DirRight:
-		return npc.Data.Texture.Right
+		base = npc.Data.Texture.Right
+		if npc.Data.IdleTexture != nil {
+			idle = npc.Data.IdleTexture.Right
+		}
+		if npc.Data.AttackTexture != nil {
+			attack = npc.Data.AttackTexture.Right
+		}
 	default:
 		return nil
 	}
+
+	// Priority: Attack > Idle > Base
+	isAttacking := npc.Data.AttackState != AttackIdle
+	if isAttacking && attack != nil {
+		return attack
+	}
+	if npc.Data.IsIdle && idle != nil {
+		return idle
+	}
+	return base
 }
 
 // Knockback the NPC in the opposite direction theyre facing
