@@ -397,7 +397,7 @@ func (m *MapMaker) update() {
 				m.uiState.selectedTool == "eraser" ||
 				m.uiState.selectedTool == "pencileraser" ||
 				m.uiState.selectedTool == "layers" ||
-				(m.uiState.selectedTool == "location" && m.uiState.locationMode == 1) {
+				(m.uiState.selectedTool == "location" && (m.uiState.locationMode == 1 || m.uiState.locationMode == 3)) {
 				if gridX >= 0 && gridX < m.tileGrid.Width &&
 					gridY >= 0 && gridY < m.tileGrid.Height &&
 					mousePos.Y > float32(m.uiState.menuBarHeight) {
@@ -500,6 +500,8 @@ func (m *MapMaker) update() {
 					// Reset the list if were about to add new positions
 					if m.uiState.locationMode == 1 {
 						m.tileGrid.DungeonEntry = beam.Positions{}
+					} else if m.uiState.locationMode == 3 {
+						m.tileGrid.Exit = beam.Positions{}
 					}
 
 					for _, tile := range m.tileGrid.selectedTiles {
@@ -511,7 +513,7 @@ func (m *MapMaker) update() {
 						case 2:
 							m.tileGrid.Respawn = tile
 						case 3:
-							m.tileGrid.Exit = tile
+							m.tileGrid.Exit = append(m.tileGrid.Exit, tile)
 						}
 					}
 					break

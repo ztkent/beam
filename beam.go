@@ -20,7 +20,7 @@ type Map struct {
 	NPCs          NPCs
 	Items         Items
 	Start         Position
-	Exit          Position
+	Exit          Positions
 	Respawn       Position
 	DungeonEntry  Positions
 }
@@ -29,6 +29,16 @@ type Positions []Position
 type Position struct {
 	X, Y int
 }
+
+func (p Positions) PositionExists(pos Position) bool {
+	for _, p := range p {
+		if p.X == pos.X && p.Y == pos.Y {
+			return true
+		}
+	}
+	return false
+}
+
 type Direction int
 
 const (
