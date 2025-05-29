@@ -22,19 +22,21 @@ type Tile struct {
 	Textures []*AnimatedTexture
 }
 
-func NewSimpleTileTexture(name string) *AnimatedTexture {
+func NewSimpleTileTexture(name ...string) *AnimatedTexture {
+	frames := make([]Texture, len(name))
+	for i, n := range name {
+		frames[i] = Texture{
+			Name:     n,
+			Rotation: 0,
+			ScaleX:   1,
+			ScaleY:   1,
+			OffsetX:  0,
+			OffsetY:  0,
+			Tint:     rl.White,
+		}
+	}
 	return &AnimatedTexture{
-		Frames: []Texture{
-			{
-				Name:     name,
-				Rotation: 0,
-				ScaleX:   1,
-				ScaleY:   1,
-				OffsetX:  0,
-				OffsetY:  0,
-				Tint:     rl.White,
-			},
-		},
+		Frames:     frames,
 		IsAnimated: false,
 	}
 }

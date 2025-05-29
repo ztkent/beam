@@ -335,10 +335,14 @@ func (m *MapMaker) renderGridTile(pos rl.Rectangle, pos2d beam.Position, tile be
 		switch {
 		case pos2d.X == m.tileGrid.Start.X && pos2d.Y == m.tileGrid.Start.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Green)
-		case pos2d.X == m.tileGrid.Exit.X && pos2d.Y == m.tileGrid.Exit.Y:
-			rl.DrawRectangleLinesEx(pos, 2, rl.Red)
 		case pos2d.X == m.tileGrid.Respawn.X && pos2d.Y == m.tileGrid.Respawn.Y:
 			rl.DrawRectangleLinesEx(pos, 2, rl.Blue)
+		}
+
+		for _, entry := range m.tileGrid.Exit {
+			if pos2d.X == entry.X && pos2d.Y == entry.Y {
+				rl.DrawRectangleLinesEx(pos, 2, rl.Red)
+			}
 		}
 
 		for _, entry := range m.tileGrid.DungeonEntry {

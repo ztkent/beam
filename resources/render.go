@@ -126,7 +126,7 @@ func (rm *ResourceManager) RenderNPC(npc *beam.NPC, pos rl.Rectangle, tileSize i
 		damageColor := rl.NewColor(255, 0, 0, uint8(255*alpha)) // Bright red with fade
 
 		// Render both the enemy and the damage overlay
-		rm.RenderTexture(npc.Data.Texture.Up, pos, tileSize)
+		rm.RenderTexture(npc.GetCurrentTexture(), pos, tileSize)
 		rm.RenderTexture(&beam.AnimatedTexture{
 			Frames: []beam.Texture{
 				{
