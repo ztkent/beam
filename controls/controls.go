@@ -8,7 +8,26 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
-// InputType represents the type of input device
+/*
+Controls system provides:
+  • Handle M&K and Gamepad input seamlessly
+  • Action-based input mapping with JSON customizable configuration
+  • Real-time device switching and state management
+  • Deadzone configuration support
+
+Usage:
+    cm := NewControlsManager("config/controls.json")
+
+    // Core gameplay
+    if cm.IsActionPressed(ActionAttack) {
+        performAttack()
+    }
+
+    // Analog movement
+    moveX := cm.GetActionAxis(ActionMoveRight, ActionMoveLeft)
+    moveY := cm.GetActionAxis(ActionMoveDown, ActionMoveUp)
+*/
+
 type InputType int
 
 const (
