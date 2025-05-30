@@ -16,6 +16,13 @@
           "program": "${workspaceFolder}/tools/spritesheet-viewer/cmd",
           "args": [],
           "envFile": "${workspaceFolder}/.env"
+        },
+        {
+          "name": "controller test",
+          "type": "go",
+          "request": "launch",
+          "program": "${workspaceFolder}/controls/controller_example",
+          "args": []
         }
     ]
 }

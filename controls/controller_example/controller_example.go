@@ -1,9 +1,7 @@
-// go:build integration
-package controllertest
+package main
 
 import (
 	"fmt"
-	"testing"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -15,7 +13,7 @@ const (
 
 // https://github.com/gen2brain/raylib-go/blob/master/examples/core/input_gamepad/main.go
 
-func Test_Controller(t *testing.T) {
+func main() {
 	rl.SetConfigFlags(rl.FlagMsaa4xHint) // Set MSAA 4X hint before windows creation
 
 	rl.InitWindow(800, 450, "raylib [core] example - gamepad input")
