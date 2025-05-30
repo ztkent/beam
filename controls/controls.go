@@ -29,6 +29,7 @@ const (
 
 	// Game actions
 	ActionAttack    Action = "attack"
+	ActionSelect    Action = "select"
 	ActionInteract  Action = "interact"
 	ActionEquip     Action = "equip"
 	ActionInventory Action = "inventory"
@@ -129,6 +130,8 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	// Game actions
 	keyboardScheme.Bindings[ActionAttack] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeySpace},
+	}
+	keyboardScheme.Bindings[ActionSelect] = []InputBinding{
 		{Type: InputMouse, Button: rl.MouseButtonLeft},
 	}
 	keyboardScheme.Bindings[ActionInteract] = []InputBinding{
@@ -194,6 +197,9 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	gamepadScheme.Bindings[ActionAttack] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Gamepad: 0}, // A/X button
 		{Type: InputGamepad, Button: rl.GamepadButtonRightTrigger1, Gamepad: 0}, // Right bumper
+	}
+	gamepadScheme.Bindings[ActionSelect] = []InputBinding{
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Gamepad: 0}, // A/X button
 	}
 	gamepadScheme.Bindings[ActionInteract] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Gamepad: 0}, // Y/Square button
