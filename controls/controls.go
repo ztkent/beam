@@ -768,3 +768,70 @@ func KeyCodeToString(key int32) string {
 		return fmt.Sprintf("Key(%d)", key)
 	}
 }
+
+func GamepadButtonToString(button int32) string {
+	switch button {
+	case rl.GamepadButtonLeftFaceUp:
+		return "DPad Up"
+	case rl.GamepadButtonLeftFaceDown:
+		return "DPad Down"
+	case rl.GamepadButtonLeftFaceLeft:
+		return "DPad Left"
+	case rl.GamepadButtonLeftFaceRight:
+		return "DPad Right"
+	case rl.GamepadButtonRightFaceUp:
+		return "A/X Button"
+	case rl.GamepadButtonRightFaceDown:
+		return "B/Circle Button"
+	case rl.GamepadButtonRightFaceLeft:
+		return "Y/Square Button"
+	case rl.GamepadButtonRightFaceRight:
+		return "X/Triangle Button"
+	case rl.GamepadButtonLeftTrigger1:
+		return "Left Bumper"
+	case rl.GamepadButtonRightTrigger1:
+		return "Right Bumper"
+	case rl.GamepadButtonMiddleLeft:
+		return "Select/Back Button"
+	case rl.GamepadButtonMiddleRight:
+		return "Start/Options Button"
+	default:
+		return fmt.Sprintf("Button(%d)", button)
+	}
+}
+
+func GamepadAxisToString(axis int32) string {
+	switch axis {
+	case rl.GamepadAxisLeftX:
+		return "Left Stick X"
+	case rl.GamepadAxisLeftY:
+		return "Left Stick Y"
+	case rl.GamepadAxisRightX:
+		return "Right Stick X"
+	case rl.GamepadAxisRightY:
+		return "Right Stick Y"
+	case rl.GamepadAxisLeftTrigger:
+		return "Left Trigger"
+	case rl.GamepadAxisRightTrigger:
+		return "Right Trigger"
+	default:
+		return fmt.Sprintf("Axis(%d)", axis)
+	}
+}
+
+func MouseButtonToString(button int32) string {
+	switch button {
+	case int32(rl.MouseButtonLeft):
+		return "Left Button"
+	case int32(rl.MouseButtonRight):
+		return "Right Button"
+	case int32(rl.MouseButtonMiddle):
+		return "Middle Button"
+	case int32(rl.MouseButtonSide):
+		return "Side Button"
+	case int32(rl.MouseButtonExtra):
+		return "Extra Button"
+	default:
+		return fmt.Sprintf("Mouse Button(%d)", button)
+	}
+}
