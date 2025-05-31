@@ -10,9 +10,9 @@ import (
 
 /*
 Controls system provides:
-  • Handle M&K and Gamepad input seamlessly
+  • Handle M&K and Gamepad input
   • Action-based input mapping with JSON customizable configuration
-  • Real-time device switching and state management
+  • Real-time device switching
   • Deadzone configuration support
 
 Usage:
@@ -22,6 +22,8 @@ Usage:
     if cm.IsActionPressed(ActionAttack) {
         performAttack()
     }
+
+	cm.Update() // Call this every frame to update input state
 
     // Analog movement
     moveX := cm.GetActionAxis(ActionMoveRight, ActionMoveLeft)
