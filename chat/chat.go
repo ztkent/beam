@@ -4,6 +4,7 @@ import (
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
+	"github.com/ztkent/beam/controls"
 )
 
 type DialogState int
@@ -65,21 +66,20 @@ func DefaultDialog() []Dialog {
 	}
 }
 
-func (c *Chat) Update() {
+func (c *Chat) Update(cm *controls.ControlsManager) {
 	switch c.State {
 	case DialogVisible:
 		// Check if duration has passed
 		if time.Since(c.StartTime) >= c.Dialogs[c.CurrentDialog].Duration {
 			c.State = DialogWaiting
 		}
-
 		// Check for continue input
-		if rl.IsKeyPressed(rl.KeySpace) || rl.IsKeyPressed(rl.KeyEnter) {
+		if cm.IsActionPressed(controls.ActionConfirm) {
 			c.NextDialog()
 		}
 
 	case DialogWaiting:
-		if rl.IsKeyPressed(rl.KeySpace) || rl.IsKeyPressed(rl.KeyEnter) {
+		if cm.IsActionPressed(controls.ActionConfirm) {
 			c.NextDialog()
 		}
 	}

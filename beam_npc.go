@@ -6,6 +6,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/ztkent/beam/chat"
+	"github.com/ztkent/beam/controls"
 	beam_math "github.com/ztkent/beam/math"
 )
 
@@ -267,7 +268,7 @@ func (npc *NPC) GetCurrentTexture() *AnimatedTexture {
 }
 
 // Run the NPC update loop.
-func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
+func (npc *NPC) Update(playerPos Position, currMap *Map, cm *controls.ControlsManager) (died bool) {
 	if npc.Data.Dead {
 		totalDyingFrames := 32
 		npc.Data.DyingFrames++
@@ -290,7 +291,7 @@ func (npc *NPC) Update(playerPos Position, currMap *Map) (died bool) {
 		if npc.CurrentChat.State == chat.DialogFinished || npc.CurrentChat.State == chat.DialogHidden {
 			npc.Data.IsInteracting = false
 		}
-		npc.CurrentChat.Update()
+		npc.CurrentChat.Update(cm)
 		npc.CurrentChat.Draw()
 		return false
 	}
@@ -618,6 +619,8 @@ func (npc *NPC) knockback(playerPos Position, tiles [][]Tile, dist int) {
 	}
 }
 
+// occupiesTile checks if the NPC occupies the given tile coordinates (x, y).
+// some NPCs may occupy multiple tiles based on their size.
 func (npc *NPC) occupiesTile(x, y int) bool {
 	width, height := npc.Data.Size.GetDimensions()
 
@@ -630,6 +633,7 @@ func (npc *NPC) occupiesTile(x, y int) bool {
 	return x >= left && x <= right && y >= top && y <= bottom
 }
 
+// distanceToNPC calculates the Manhattan distance from a point (x, y) to the NPC's bounding box. (based on its size)
 func (npc *NPC) distanceToNPC(x, y int) int {
 	width, height := npc.Data.Size.GetDimensions()
 
