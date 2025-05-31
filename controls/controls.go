@@ -70,12 +70,12 @@ const (
 
 // InputBinding represents a binding between an action and an input
 type InputBinding struct {
-	Type     InputType      `json:"type"`
-	Key      int32          `json:"key,omitempty"`      // For keyboard
-	Button   rl.MouseButton `json:"button,omitempty"`   // For gamepad/mouse
-	Axis     int32          `json:"axis,omitempty"`     // For gamepad analog sticks
-	Positive bool           `json:"positive,omitempty"` // For axis direction
-	Gamepad  int32          `json:"gamepad,omitempty"`  // Gamepad index
+	Type     InputType `json:"type"`
+	Key      int32     `json:"key,omitempty"`      // For keyboard
+	Button   int32     `json:"button,omitempty"`   // For gamepad/mouse
+	Axis     int32     `json:"axis,omitempty"`     // For gamepad analog sticks
+	Positive bool      `json:"positive,omitempty"` // For axis direction
+	Gamepad  int32     `json:"gamepad,omitempty"`  // Gamepad index
 }
 
 // ControlScheme holds all input mappings
@@ -151,7 +151,7 @@ func (cm *ControlsManager) createDefaultSchemes() {
 		{Type: InputKeyboard, Key: rl.KeySpace},
 	}
 	keyboardScheme.Bindings[ActionSelect] = []InputBinding{
-		{Type: InputMouse, Button: rl.MouseButtonLeft},
+		{Type: InputMouse, Button: int32(rl.MouseButtonLeft)},
 	}
 	keyboardScheme.Bindings[ActionInteract] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeyQ},
@@ -161,11 +161,9 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	}
 	keyboardScheme.Bindings[ActionInventory] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeyI},
-		{Type: InputKeyboard, Key: rl.KeyTab},
 	}
 	keyboardScheme.Bindings[ActionPause] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeyEscape},
-		{Type: InputKeyboard, Key: rl.KeyP},
 	}
 
 	// UI actions
@@ -196,52 +194,52 @@ func (cm *ControlsManager) createDefaultSchemes() {
 
 	// Movement (D-pad and left stick)
 	gamepadScheme.Bindings[ActionMoveUp] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceUp, Gamepad: 0},
+		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceUp, Axis: -1, Gamepad: 0},
 		{Type: InputGamepad, Axis: rl.GamepadAxisLeftY, Positive: false, Gamepad: 0},
 	}
 	gamepadScheme.Bindings[ActionMoveDown] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceDown, Gamepad: 0},
+		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceDown, Axis: -1, Gamepad: 0},
 		{Type: InputGamepad, Axis: rl.GamepadAxisLeftY, Positive: true, Gamepad: 0},
 	}
 	gamepadScheme.Bindings[ActionMoveLeft] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceLeft, Gamepad: 0},
+		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceLeft, Axis: -1, Gamepad: 0},
 		{Type: InputGamepad, Axis: rl.GamepadAxisLeftX, Positive: false, Gamepad: 0},
 	}
 	gamepadScheme.Bindings[ActionMoveRight] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceRight, Gamepad: 0},
+		{Type: InputGamepad, Button: rl.GamepadButtonLeftFaceRight, Axis: -1, Gamepad: 0},
 		{Type: InputGamepad, Axis: rl.GamepadAxisLeftX, Positive: true, Gamepad: 0},
 	}
 
 	// Game actions
 	gamepadScheme.Bindings[ActionAttack] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Gamepad: 0}, // A/X button
-		{Type: InputGamepad, Button: rl.GamepadButtonRightTrigger1, Gamepad: 0}, // Right bumper
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Axis: -1, Gamepad: 0}, // A/X button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightTrigger1, Axis: -1, Gamepad: 0}, // Right bumper
 	}
 	gamepadScheme.Bindings[ActionSelect] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Gamepad: 0}, // A/X button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Axis: -1, Gamepad: 0}, // A/X button
 	}
 	gamepadScheme.Bindings[ActionInteract] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Gamepad: 0}, // Y/Square button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // Y/Square button
 	}
 	gamepadScheme.Bindings[ActionEquip] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Gamepad: 0}, // Y/Square button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // Y/Square button
 	}
 	gamepadScheme.Bindings[ActionInventory] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceUp, Gamepad: 0}, // X/Triangle button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceUp, Axis: -1, Gamepad: 0}, // X/Triangle button
 	}
 	gamepadScheme.Bindings[ActionPause] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonMiddle, Gamepad: 0}, // Start/Options button
+		{Type: InputGamepad, Button: rl.GamepadButtonMiddleRight, Axis: -1, Gamepad: 0}, // Start/Options button
 	}
 
 	// UI actions
 	gamepadScheme.Bindings[ActionConfirm] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Gamepad: 0}, // A/X button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Axis: -1, Gamepad: 0}, // A/X button
 	}
 	gamepadScheme.Bindings[ActionCancel] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceRight, Gamepad: 0}, // B/Circle button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceRight, Axis: -1, Gamepad: 0}, // B/Circle button
 	}
 	gamepadScheme.Bindings[ActionToggleHUD] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftTrigger1, Gamepad: 0}, // Left bumper
+		{Type: InputGamepad, Button: rl.GamepadButtonLeftTrigger1, Axis: -1, Gamepad: 0}, // Left bumper
 	}
 
 	// Menu navigation (D-pad and left stick)
@@ -396,7 +394,7 @@ func (cm *ControlsManager) isBindingPressed(binding InputBinding) bool {
 			return rl.IsGamepadButtonPressed(binding.Gamepad, int32(binding.Button))
 		}
 	case InputMouse:
-		return rl.IsMouseButtonPressed(binding.Button)
+		return rl.IsMouseButtonPressed(rl.MouseButton(binding.Button))
 	}
 	return false
 }
@@ -421,7 +419,7 @@ func (cm *ControlsManager) isBindingDown(binding InputBinding) bool {
 			return rl.IsGamepadButtonDown(binding.Gamepad, int32(binding.Button))
 		}
 	case InputMouse:
-		return rl.IsMouseButtonDown(binding.Button)
+		return rl.IsMouseButtonDown(rl.MouseButton(binding.Button))
 	}
 	return false
 }
@@ -454,7 +452,7 @@ func (cm *ControlsManager) isBindingReleased(binding InputBinding) bool {
 			return rl.IsGamepadButtonReleased(binding.Gamepad, int32(binding.Button))
 		}
 	case InputMouse:
-		return rl.IsMouseButtonReleased(binding.Button)
+		return rl.IsMouseButtonReleased(rl.MouseButton(binding.Button))
 	}
 	return false
 }
