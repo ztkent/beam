@@ -174,8 +174,6 @@ func main() {
 				rl.DrawRectangle(611, 48, 15, int32(((1.0-rl.GetGamepadAxisMovement(gamepad, rl.GamepadAxisRightTrigger))/2.0)*70), rl.Red)
 			} else {
 				rl.DrawText("- GENERIC GAMEPAD -", 280, 180, 20, rl.Gray)
-
-				// TODO: Draw generic gamepad
 			}
 
 			rl.DrawText(fmt.Sprintf("DETECTED AXIS [%d]:", rl.GetGamepadAxisCount(gamepad)), 10, 50, 10, rl.Maroon)
