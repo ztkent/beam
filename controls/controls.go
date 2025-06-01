@@ -3,6 +3,7 @@ package controls
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -45,6 +46,8 @@ const (
 type Action string
 
 const (
+	ActionNone Action = "none"
+
 	// Movement actions
 	ActionMoveUp    Action = "move_up"
 	ActionMoveDown  Action = "move_down"
@@ -355,6 +358,35 @@ func (cm *ControlsManager) GetActionAxis(positiveAction, negativeAction Action) 
 	}
 
 	return value
+}
+
+// GetStrongestMovementAction returns the movement action with the highest input strength
+// Returns ActionNone if no movement input is detected
+func (cm *ControlsManager) GetStrongestMovementAction() Action {
+	// Get analog values for both axes
+	horizontalValue := cm.GetActionAxis(ActionMoveRight, ActionMoveLeft)
+	verticalValue := cm.GetActionAxis(ActionMoveDown, ActionMoveUp)
+
+	// Find the strongest input
+	absHorizontal := float32(math.Abs(float64(horizontalValue)))
+	absVertical := float32(math.Abs(float64(verticalValue)))
+
+	// Require minimum threshold to avoid tiny analog stick drift
+	const minThreshold = 0.2
+
+	if absHorizontal > absVertical && absHorizontal > minThreshold {
+		if horizontalValue > 0 {
+			return ActionMoveRight
+		}
+		return ActionMoveLeft
+	} else if absVertical > minThreshold {
+		if verticalValue > 0 {
+			return ActionMoveDown
+		}
+		return ActionMoveUp
+	}
+
+	return ActionNone
 }
 
 // isBindingPressed checks if a specific binding was just pressed
