@@ -168,6 +168,7 @@ func (cm *ControlsManager) createDefaultSchemes() {
 		{Type: InputKeyboard, Key: rl.KeySpace},
 	}
 	keyboardScheme.Bindings[ActionCancel] = []InputBinding{
+		{Type: InputKeyboard, Key: rl.KeyEscape},
 		{Type: InputKeyboard, Key: rl.KeyBackspace},
 	}
 
