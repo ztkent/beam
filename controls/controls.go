@@ -17,6 +17,9 @@ Controls system provides:
 
 Usage:
     cm := NewControlsManager("config/controls.json")
+	cm.AddCustomBinding("gamepad", ActionAttack, controls.InputBinding{
+		Type: controls.InputGamepad, Button: rl.GamepadButtonRightTrigger2, Axis: -1, Gamepad: 0,
+	})
 
     // Core gameplay
     if cm.IsActionPressed(ActionAttack) {

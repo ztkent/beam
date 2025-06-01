@@ -22,6 +22,11 @@
   - Quest and resource items
   - Stackable items support
   - Animated item textures
+- [x] Controls Manager
+  - Keyboard and mouse input handling
+  - Gamepad support with customizable bindings
+  - Real-time device switching
+  - Configurable deadzones for gamepad sticks
 
 ### Map editor
 
