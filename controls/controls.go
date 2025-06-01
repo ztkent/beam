@@ -64,10 +64,11 @@ const (
 	ActionToggleControls Action = "toggle_controls"
 
 	// Menu navigation
-	ActionMenuUp    Action = "menu_up"
-	ActionMenuDown  Action = "menu_down"
-	ActionMenuLeft  Action = "menu_left"
-	ActionMenuRight Action = "menu_right"
+	ActionMenuUp      Action = "menu_up"
+	ActionMenuDown    Action = "menu_down"
+	ActionMenuLeft    Action = "menu_left"
+	ActionMenuRight   Action = "menu_right"
+	ActionMenuConfirm Action = "menu_confirm"
 )
 
 // InputBinding represents a binding between an action and an input
@@ -186,6 +187,12 @@ func (cm *ControlsManager) createDefaultSchemes() {
 		{Type: InputKeyboard, Key: rl.KeyK},
 	}
 
+	keyboardScheme.Bindings[ActionMenuUp] = keyboardScheme.Bindings[ActionMoveUp]
+	keyboardScheme.Bindings[ActionMenuDown] = keyboardScheme.Bindings[ActionMoveDown]
+	keyboardScheme.Bindings[ActionMenuLeft] = keyboardScheme.Bindings[ActionMoveLeft]
+	keyboardScheme.Bindings[ActionMenuRight] = keyboardScheme.Bindings[ActionMoveRight]
+	keyboardScheme.Bindings[ActionMenuConfirm] = keyboardScheme.Bindings[ActionConfirm]
+
 	cm.schemes["keyboard"] = keyboardScheme
 
 	// Default gamepad scheme
@@ -249,7 +256,7 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	gamepadScheme.Bindings[ActionMenuDown] = gamepadScheme.Bindings[ActionMoveDown]
 	gamepadScheme.Bindings[ActionMenuLeft] = gamepadScheme.Bindings[ActionMoveLeft]
 	gamepadScheme.Bindings[ActionMenuRight] = gamepadScheme.Bindings[ActionMoveRight]
-
+	gamepadScheme.Bindings[ActionMenuConfirm] = gamepadScheme.Bindings[ActionConfirm]
 	cm.schemes["gamepad"] = gamepadScheme
 }
 
