@@ -49,19 +49,15 @@ const (
 	ActionMoveRight Action = "move_right"
 
 	// Game actions
-	ActionAttack    Action = "attack"
-	ActionSelect    Action = "select"
-	ActionInteract  Action = "interact"
-	ActionEquip     Action = "equip"
-	ActionInventory Action = "inventory"
-	ActionPause     Action = "pause"
+	ActionAttack   Action = "attack"
+	ActionSelect   Action = "select"
+	ActionInteract Action = "interact"
+	ActionEquip    Action = "equip"
+	ActionPause    Action = "pause"
 
 	// UI actions
-	ActionConfirm        Action = "confirm"
-	ActionCancel         Action = "cancel"
-	ActionToggleHUD      Action = "toggle_hud"
-	ActionToggleStats    Action = "toggle_stats"
-	ActionToggleControls Action = "toggle_controls"
+	ActionConfirm Action = "confirm"
+	ActionCancel  Action = "cancel"
 
 	// Menu navigation
 	ActionMenuUp      Action = "menu_up"
@@ -162,9 +158,6 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	keyboardScheme.Bindings[ActionEquip] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeyE},
 	}
-	keyboardScheme.Bindings[ActionInventory] = []InputBinding{
-		{Type: InputKeyboard, Key: rl.KeyI},
-	}
 	keyboardScheme.Bindings[ActionPause] = []InputBinding{
 		{Type: InputKeyboard, Key: rl.KeyEscape},
 	}
@@ -175,16 +168,7 @@ func (cm *ControlsManager) createDefaultSchemes() {
 		{Type: InputKeyboard, Key: rl.KeySpace},
 	}
 	keyboardScheme.Bindings[ActionCancel] = []InputBinding{
-		{Type: InputKeyboard, Key: rl.KeyEscape},
-	}
-	keyboardScheme.Bindings[ActionToggleHUD] = []InputBinding{
-		{Type: InputKeyboard, Key: rl.KeyH},
-	}
-	keyboardScheme.Bindings[ActionToggleStats] = []InputBinding{
-		{Type: InputKeyboard, Key: rl.KeyC},
-	}
-	keyboardScheme.Bindings[ActionToggleControls] = []InputBinding{
-		{Type: InputKeyboard, Key: rl.KeyK},
+		{Type: InputKeyboard, Key: rl.KeyBackspace},
 	}
 
 	keyboardScheme.Bindings[ActionMenuUp] = keyboardScheme.Bindings[ActionMoveUp]
@@ -222,19 +206,16 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	// Game actions
 	gamepadScheme.Bindings[ActionAttack] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Axis: -1, Gamepad: 0}, // A/X button
-		{Type: InputGamepad, Button: rl.GamepadButtonRightTrigger1, Axis: -1, Gamepad: 0}, // Right bumper
+		{Type: InputGamepad, Button: rl.GamepadButtonRightTrigger2, Axis: -1, Gamepad: 0}, // Right Trigger
 	}
 	gamepadScheme.Bindings[ActionSelect] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceDown, Axis: -1, Gamepad: 0}, // A/X button
 	}
 	gamepadScheme.Bindings[ActionInteract] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // Y/Square button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // X/Square button
 	}
 	gamepadScheme.Bindings[ActionEquip] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // Y/Square button
-	}
-	gamepadScheme.Bindings[ActionInventory] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceUp, Axis: -1, Gamepad: 0}, // X/Triangle button
+		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceLeft, Axis: -1, Gamepad: 0}, // X/Square button
 	}
 	gamepadScheme.Bindings[ActionPause] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonMiddleRight, Axis: -1, Gamepad: 0}, // Start/Options button
@@ -246,9 +227,6 @@ func (cm *ControlsManager) createDefaultSchemes() {
 	}
 	gamepadScheme.Bindings[ActionCancel] = []InputBinding{
 		{Type: InputGamepad, Button: rl.GamepadButtonRightFaceRight, Axis: -1, Gamepad: 0}, // B/Circle button
-	}
-	gamepadScheme.Bindings[ActionToggleHUD] = []InputBinding{
-		{Type: InputGamepad, Button: rl.GamepadButtonLeftTrigger1, Axis: -1, Gamepad: 0}, // Left bumper
 	}
 
 	// Menu navigation (D-pad and left stick)
