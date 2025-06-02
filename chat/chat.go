@@ -1,6 +1,8 @@
 package chat
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
@@ -105,7 +107,7 @@ func (c *Chat) NextDialog() {
 	c.State = DialogVisible
 }
 
-func (c *Chat) Draw() {
+func (c *Chat) Draw(cm *controls.ControlsManager) {
 	if c.State == DialogHidden || c.State == DialogFinished {
 		return
 	}
@@ -164,7 +166,28 @@ func (c *Chat) Draw() {
 
 	// Draw continue prompt if in waiting state
 	if c.State == DialogWaiting {
-		promptText := "Press SPACE to continue"
+		activeScheme := cm.GetActiveScheme()
+		interactBinding := activeScheme.Bindings[controls.ActionConfirm]
+		if len(interactBinding) == 0 {
+			return
+		}
+
+		keyOptions := []string{}
+		for _, key := range interactBinding {
+			switch key.Type {
+			case controls.InputKeyboard:
+				keyOptions = append(keyOptions, controls.KeyCodeToString(key.Key))
+			case controls.InputGamepad:
+				if key.Axis >= 0 {
+					keyOptions = append(keyOptions, controls.GamepadAxisToString(key.Axis))
+				}
+				keyOptions = append(keyOptions, controls.GamepadButtonToString(key.Button))
+			case controls.InputMouse:
+				keyOptions = append(keyOptions, controls.MouseButtonToString(key.Button))
+			}
+		}
+
+		promptText := fmt.Sprintf("Press %s to continue", strings.Join(keyOptions, "/"))
 		promptSize := rl.MeasureTextEx(c.Font, promptText, 16, 1)
 		rl.DrawTextEx(
 			c.Font,

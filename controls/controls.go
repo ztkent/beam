@@ -801,21 +801,21 @@ func GamepadButtonToString(button int32) string {
 	case rl.GamepadButtonLeftFaceRight:
 		return "DPad Right"
 	case rl.GamepadButtonRightFaceUp:
-		return "A/X Button"
+		return "Y"
 	case rl.GamepadButtonRightFaceDown:
-		return "B/Circle Button"
+		return "A"
 	case rl.GamepadButtonRightFaceLeft:
-		return "Y/Square Button"
+		return "X"
 	case rl.GamepadButtonRightFaceRight:
-		return "X/Triangle Button"
+		return "B"
 	case rl.GamepadButtonLeftTrigger1:
 		return "Left Bumper"
 	case rl.GamepadButtonRightTrigger1:
 		return "Right Bumper"
 	case rl.GamepadButtonMiddleLeft:
-		return "Select/Back Button"
+		return "Select"
 	case rl.GamepadButtonMiddleRight:
-		return "Start/Options Button"
+		return "Start"
 	default:
 		return fmt.Sprintf("Button(%d)", button)
 	}

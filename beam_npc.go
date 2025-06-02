@@ -292,7 +292,7 @@ func (npc *NPC) Update(playerPos Position, currMap *Map, cm *controls.ControlsMa
 			npc.Data.IsInteracting = false
 		}
 		npc.CurrentChat.Update(cm)
-		npc.CurrentChat.Draw()
+		npc.CurrentChat.Draw(cm)
 		return false
 	}
 
