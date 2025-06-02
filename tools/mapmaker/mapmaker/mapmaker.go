@@ -9,6 +9,7 @@ import (
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/ztkent/beam"
+	"github.com/ztkent/beam/controls"
 	"github.com/ztkent/beam/resources"
 	"github.com/ztkent/beam/tools/spritesheet-viewer/viewer"
 )
@@ -16,6 +17,7 @@ import (
 type MapMaker struct {
 	window             *Window
 	resources          *resources.ResourceManager
+	cm                 *controls.ControlsManager
 	uiState            *UIState
 	tileGrid           *TileGrid
 	currentFile        string
@@ -603,7 +605,7 @@ func (m *MapMaker) update() {
 		npc.Update(beam.Position{
 			X: -1,
 			Y: -1,
-		}, &m.tileGrid.Map)
+		}, &m.tileGrid.Map, m.cm)
 	}
 }
 
