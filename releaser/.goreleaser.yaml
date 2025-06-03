@@ -1,0 +1,164 @@
+# GoReleaser configuration for Primo's Dungeon
+version: 2
+
+project_name: primos-dungeon
+
+# Build configuration
+builds:
+  - id: primos-dungeon
+    main: ./cmd/pd.go
+    binary: primos-dungeon
+    flags:
+      - -trimpath
+      
+    # Cross-compilation targets (focusing on reliable builds)
+    goos:
+      - windows
+      - linux
+    goarch:
+      - amd64
+    
+    # Skip ARM64 for now due to complex cross-compilation requirements
+    # Can be re-enabled once proper toolchain is set up
+    
+    # Build flags and environment
+    env:
+      - CGO_ENABLED=1  # Required for Raylib
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    
+    # Platform-specific configurations
+    overrides:
+      - goos: windows
+        goarch: amd64
+        env:
+          - CC=x86_64-w64-mingw32-gcc
+          - CXX=x86_64-w64-mingw32-g++
+          - CGO_ENABLED=1
+        ldflags:
+          - -s -w
+          - -H=windowsgui  # Remove console window
+          - -X main.version={{.Version}}
+          - -X main.commit={{.Commit}}
+          - -X main.date={{.Date}}
+          - -X main.builtBy=goreleaser
+      
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=gcc
+          - CGO_ENABLED=1
+
+# Archive configuration - creates distributable packages
+archives:
+  - id: primos-dungeon-archive
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    
+    # Include game assets
+    files:
+      - assets/**/*
+      - README.md
+      - LICENSE
+      - raylib.dll  # For Windows builds
+
+    # Different formats for different platforms
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+      - goos: linux
+        formats: ['tar.gz']
+
+    # Custom folder structure in archives
+    wrap_in_directory: true
+
+# Checksum configuration
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+# Changelog configuration
+changelog:
+  use: github
+  sort: asc
+  abbrev: 0
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: "🚀 New Features"
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: "📖 Documentation"
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 2
+    - title: "🔄 Other Changes"
+      order: 999
+
+# GitHub release configuration
+release:
+  github:
+    owner: ztkent
+    name: primos-dungeon
+  
+  # Release notes
+  header: |
+    ## Primo's Dungeon {{ .Tag }}
+    
+    Welcome to another release of Primo's Dungeon! 🎮
+    
+    ### What's New
+  
+  footer: |
+    ## Installation
+    
+    ### Windows (x64)
+    1. Download `primos-dungeon_{{ .Tag }}_windows_amd64.zip`
+    2. Extract the archive
+    3. Run `primos-dungeon.exe`
+
+    ### Linux (x64)
+    1. Download `primos-dungeon_{{ .Tag }}_linux_amd64.tar.gz`
+    2. Extract: `tar -xzf primos-dungeon_{{ .Tag }}_linux_amd64.tar.gz`
+    3. Install dependencies:
+       - Ubuntu/Debian: `sudo apt-get install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libwayland-dev libxkbcommon-dev`
+       - Fedora: `sudo dnf install mesa-libGL-devel libXi-devel libXcursor-devel libXrandr-devel libXinerama-devel wayland-devel libxkbcommon-devel`
+    4. Run `./primos-dungeon`
+    
+    ### System Requirements
+    - **Windows**: Windows 10 or later (x64), MinGW-w64 runtime
+    - **Linux**: Ubuntu 18.04 or equivalent with required OpenGL and X11/Wayland libraries (x64)
+        
+    **Full Changelog**: https://github.com/ztkent/primos-dungeon/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# Snapshot configuration for development builds
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev-{{ .ShortCommit }}"
+
+# Git configuration
+git:
+  tag_sort: -version:refname
+
+# Metadata for releases
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
+
+# Custom hooks
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go generate ./...
