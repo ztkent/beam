@@ -35,6 +35,13 @@ Example usage:
         Path: "assets/font.ttf",
     })
 
+    Use "NewResourceManagerWithGlobalEmbed" if you want to use embedded resources (Needed for release)
+    Provide a fs.FS package with the embedded resources
+    i.e.
+        package assets
+        // go:embed all:audio all:fonts all:maps all:textures
+        var Assets embed.FS
+
     // Add a new scene with resources
     rm.AddScene("dungeon", []Resource{
         {
