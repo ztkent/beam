@@ -1,29 +1,33 @@
-# GoReleaser configuration for Primo's Dungeon
+# GoReleaser configuration for Beam Game Engine
 version: 2
 
-project_name: primos-dungeon
+project_name: "{{ .Env.PROJECT_NAME | default \"beam-game\" }}"
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go generate ./...
 
 # Build configuration
 builds:
-  - id: primos-dungeon
-    main: ./cmd/pd.go
-    binary: primos-dungeon
+  - id: beam-game
+    main: "{{ .Env.MAIN_PATH | default \"./cmd/main.go\" }}"
+    binary: "{{ .Env.BINARY_NAME | default .ProjectName }}"
+    skip: '{{ eq .Runtime.Goos "darwin" }}'
     flags:
       - -trimpath
       
-    # Cross-compilation targets (focusing on reliable builds)
+    # Windows and Linux builds
     goos:
       - windows
       - linux
     goarch:
       - amd64
     
-    # Skip ARM64 for now due to complex cross-compilation requirements
-    # Can be re-enabled once proper toolchain is set up
-    
     # Build flags and environment
     env:
-      - CGO_ENABLED=1  # Required for Raylib
+      - CGO_ENABLED=1
 
     ldflags:
       - -s -w
@@ -42,7 +46,7 @@ builds:
           - CGO_ENABLED=1
         ldflags:
           - -s -w
-          - -H=windowsgui  # Remove console window
+          - -H=windowsgui
           - -X main.version={{.Version}}
           - -X main.commit={{.Commit}}
           - -X main.date={{.Date}}
@@ -54,34 +58,55 @@ builds:
           - CC=gcc
           - CGO_ENABLED=1
 
-# Archive configuration - creates distributable packages
+  # macOS ARM64 build
+  - id: beam-game-arm-mac
+    main: "{{ .Env.MAIN_PATH | default \"./cmd/main.go\" }}"
+    binary: "{{ .Env.BINARY_NAME | default .ProjectName }}"
+    # Only run this build on macOS ARM64
+    skip: '{{ ne .Runtime.Goos "darwin" }}'
+    flags:
+      - -trimpath
+      
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    
+    env:
+      - CGO_ENABLED=1
+      - CC=clang
+      - CXX=clang++
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    
+# Archive configuration
 archives:
-  - id: primos-dungeon-archive
+  - id: beam-game-archive
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     
-    # Include game assets
+    # Include game assets and raylib
     files:
       - assets/**/*
       - README.md
       - LICENSE
-      - raylib.dll  # For Windows builds
+      - raylib.dll
 
-    # Different formats for different platforms
     format_overrides:
       - goos: windows
         formats: ['zip']
       - goos: linux
         formats: ['tar.gz']
-
-    # Custom folder structure in archives
+      - goos: darwin
+        formats: ['zip']
     wrap_in_directory: true
-
-# Checksum configuration
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
   algorithm: sha256
-
-# Changelog configuration
 changelog:
   use: github
   sort: asc
@@ -108,57 +133,50 @@ changelog:
     - title: "🔄 Other Changes"
       order: 999
 
-# GitHub release configuration
 release:
   github:
-    owner: ztkent
-    name: primos-dungeon
+    owner: "{{ .Env.GITHUB_OWNER | default \"your-username\" }}"
+    name: "{{ .Env.GITHUB_REPO | default .ProjectName }}"
   
-  # Release notes
   header: |
-    ## Primo's Dungeon {{ .Tag }}
-    
-    Welcome to another release of Primo's Dungeon! 🎮
-    
+    ## {{ .ProjectName | title }} {{ .Tag }}
+    Built with Beam Game Engine and Raylib.
     ### What's New
   
   footer: |
     ## Installation
     
     ### Windows (x64)
-    1. Download `primos-dungeon_{{ .Tag }}_windows_amd64.zip`
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_windows_amd64.zip`
     2. Extract the archive
-    3. Run `primos-dungeon.exe`
+    3. Run `{{ .Env.BINARY_NAME | default .ProjectName }}.exe`
 
     ### Linux (x64)
-    1. Download `primos-dungeon_{{ .Tag }}_linux_amd64.tar.gz`
-    2. Extract: `tar -xzf primos-dungeon_{{ .Tag }}_linux_amd64.tar.gz`
-    3. Install dependencies:
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_linux_amd64.tar.gz`
+    2. Extract: `tar -xzf {{ .ProjectName }}_{{ .Tag }}_linux_amd64.tar.gz`
+    3. Install Raylib dependencies:
        - Ubuntu/Debian: `sudo apt-get install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libwayland-dev libxkbcommon-dev`
        - Fedora: `sudo dnf install mesa-libGL-devel libXi-devel libXcursor-devel libXrandr-devel libXinerama-devel wayland-devel libxkbcommon-devel`
-    4. Run `./primos-dungeon`
+    4. Run `./{{ .Env.BINARY_NAME | default .ProjectName }}`
+    
+    ### macOS (ARM64)
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_darwin_arm64.zip`
+    2. Extract the archive
+    3. Run `./{{ .Env.BINARY_NAME | default .ProjectName }}`
+    4. You may need to allow the app in System Preferences > Security & Privacy
     
     ### System Requirements
-    - **Windows**: Windows 10 or later (x64), MinGW-w64 runtime
-    - **Linux**: Ubuntu 18.04 or equivalent with required OpenGL and X11/Wayland libraries (x64)
+    - **Windows**: Windows 10 or later (x64), MinGW-w64 runtime, Raylib 5.0+
+    - **Linux**: Ubuntu 18.04 or equivalent with required OpenGL and X11/Wayland libraries (x64), Raylib 5.0+
+    - **macOS**: macOS 11.0+ (ARM64), Raylib 5.0+
         
-    **Full Changelog**: https://github.com/ztkent/primos-dungeon/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/{{ .Env.GITHUB_OWNER | default "your-username" }}/{{ .Env.GITHUB_REPO | default .ProjectName }}/compare/{{ .PreviousTag }}...{{ .Tag }}
 
-# Snapshot configuration for development builds
 snapshot:
   version_template: "{{ incpatch .Version }}-dev-{{ .ShortCommit }}"
 
-# Git configuration
 git:
   tag_sort: -version:refname
 
-# Metadata for releases
 metadata:
   mod_timestamp: "{{ .CommitTimestamp }}"
-
-# Custom hooks
-before:
-  hooks:
-    - go mod tidy
-    - go mod download
-    - go generate ./...
