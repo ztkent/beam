@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -34,6 +35,13 @@ Example usage:
         Path: "assets/font.ttf",
     })
 
+    Use "NewResourceManagerWithGlobalEmbed" if you want to use embedded resources (Needed for release)
+    Provide a fs.FS package with the embedded resources
+    i.e.
+        package assets
+        // go:embed all:audio all:fonts all:maps all:textures
+        var Assets embed.FS
+
     // Add a new scene with resources
     rm.AddScene("dungeon", []Resource{
         {
@@ -47,8 +55,8 @@ Example usage:
 
     // Load scene resources when needed
     rm.LoadView("dungeon")
-	// Unload scene resources when not needed
-	defer rm.UnloadView("dungeon")
+    // Unload scene resources when not needed
+    defer rm.UnloadView("dungeon")
 */
 
 const (
@@ -57,7 +65,8 @@ const (
 )
 
 type ResourceManager struct {
-	Scenes []Scene
+	Scenes     []Scene
+	embeddedFS fs.FS
 }
 
 type Scene struct {
@@ -138,6 +147,22 @@ func NewResourceManagerWithGlobal(defaultTextures []Resource, defaultFont *Resou
 	return rm
 }
 
+func NewResourceManagerWithGlobalEmbed(defaultTextures []Resource, defaultFont *Resource, embeddedFS fs.FS) *ResourceManager {
+	rm := &ResourceManager{
+		Scenes:     make([]Scene, 0),
+		embeddedFS: embeddedFS,
+	}
+
+	// Add default view
+	if defaultFont != nil {
+		rm.AddScene("default", defaultTextures, defaultFont)
+	} else {
+		rm.AddScene("default", defaultTextures, nil)
+	}
+	rm.init()
+	return rm
+}
+
 // NewResourceManager creates a resource manager without any default resources
 func NewResourceManager() *ResourceManager {
 	rm := &ResourceManager{
@@ -176,6 +201,91 @@ func (rm *ResourceManager) Close() {
 	}
 }
 
+func (rm *ResourceManager) GetEmbeddedFS() *fs.FS {
+	if rm.embeddedFS == nil {
+		return nil
+	}
+	return &rm.embeddedFS
+}
+
+// LoadTexture wrapper that handles both embedded and file system loading
+func (rm *ResourceManager) LoadTexture(path string) rl.Texture2D {
+	if rm.embeddedFS != nil {
+		return rm.loadTextureFromEmbedded(path)
+	}
+	return rl.LoadTexture(path)
+}
+
+// LoadFont wrapper that handles both embedded and file system loading
+func (rm *ResourceManager) LoadFont(path string) rl.Font {
+	if rm.embeddedFS != nil {
+		return rm.loadFontFromEmbedded(path)
+	}
+	return rl.LoadFont(path)
+}
+
+func (rm *ResourceManager) loadTextureFromEmbedded(path string) rl.Texture2D {
+	data, err := fs.ReadFile(rm.embeddedFS, path)
+	if err != nil {
+		fmt.Printf("Failed to load embedded texture %s: %v\n", path, err)
+		return rl.Texture2D{}
+	}
+
+	// Determine file extension for proper loading
+	ext := strings.ToLower(filepath.Ext(path))
+	var img *rl.Image
+
+	switch ext {
+	case ".png":
+		img = rl.LoadImageFromMemory(".png", data, int32(len(data)))
+	case ".jpg", ".jpeg":
+		img = rl.LoadImageFromMemory(".jpg", data, int32(len(data)))
+	case ".bmp":
+		img = rl.LoadImageFromMemory(".bmp", data, int32(len(data)))
+	default:
+		fmt.Printf("Unsupported image format for %s\n", path)
+		return rl.Texture2D{}
+	}
+
+	if img.Data == nil {
+		fmt.Printf("Failed to decode embedded texture %s\n", path)
+		return rl.Texture2D{}
+	}
+
+	texture := rl.LoadTextureFromImage(img)
+	rl.UnloadImage(img)
+	return texture
+}
+
+func (rm *ResourceManager) loadFontFromEmbedded(path string) rl.Font {
+	data, err := fs.ReadFile(rm.embeddedFS, path)
+	if err != nil {
+		fmt.Printf("Failed to load embedded font %s: %v\n", path, err)
+		return rl.GetFontDefault()
+	}
+
+	// Determine file extension for proper loading
+	ext := strings.ToLower(filepath.Ext(path))
+	var font rl.Font
+
+	switch ext {
+	case ".ttf":
+		font = rl.LoadFontFromMemory(".ttf", data, 32, nil)
+	case ".otf":
+		font = rl.LoadFontFromMemory(".otf", data, 32, nil)
+	default:
+		fmt.Printf("Unsupported font format for %s\n", path)
+		return rl.GetFontDefault()
+	}
+
+	if font.BaseSize == 0 {
+		fmt.Printf("Failed to load embedded font %s\n", path)
+		return rl.GetFontDefault()
+	}
+
+	return font
+}
+
 func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fontDef *Resource) error {
 	// Check for duplicate view
 	for _, scene := range rm.Scenes {
@@ -210,10 +320,8 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 
 			// Automatically load all sprites in the sheet. Assign names based on their path & position.
 			if len(def.SheetData) == 0 {
-				tempTexture := rl.LoadTexture(def.Path)
 				fileName := strings.TrimSuffix(filepath.Base(def.Path), filepath.Ext(def.Path))
-				def.SheetData = ScanSpriteSheet(def.Name, fileName, tempTexture, gridSizeX, gridSizeY, def.SheetMargin)
-				rl.UnloadTexture(tempTexture)
+				def.SheetData = rm.ScanSpriteSheetEmbedded(def.Name, fileName, def.Path, gridSizeX, gridSizeY, def.SheetMargin)
 			}
 
 			// Initialize sprite regions
@@ -255,7 +363,7 @@ func (rm *ResourceManager) AddScene(sceneName string, textureDefs []Resource, fo
 	return nil
 }
 
-func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteSizeX, spriteSizeY, margin int32) map[string][]int32 {
+func (rm *ResourceManager) ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteSizeX, spriteSizeY, margin int32) map[string][]int32 {
 	sheetName := fileName
 	if name != "" {
 		sheetName = name
@@ -272,6 +380,12 @@ func ScanSpriteSheet(name string, fileName string, texture rl.Texture2D, spriteS
 	return sheetData
 }
 
+func (rm *ResourceManager) ScanSpriteSheetEmbedded(name string, fileName string, path string, spriteSizeX, spriteSizeY, margin int32) map[string][]int32 {
+	texture := rm.LoadTexture(path)
+	defer rl.UnloadTexture(texture)
+	return rm.ScanSpriteSheet(name, fileName, texture, spriteSizeX, spriteSizeY, margin)
+}
+
 func (rm *ResourceManager) LoadView(viewName string) error {
 	for i := range rm.Scenes {
 		if rm.Scenes[i].Name == viewName {
@@ -280,14 +394,14 @@ func (rm *ResourceManager) LoadView(viewName string) error {
 			// Load sprite sheets if present
 			for _, sheet := range view.SpriteSheets {
 				if !sheet.Loaded {
-					sheet.Texture = rl.LoadTexture(sheet.Path)
+					sheet.Texture = rm.LoadTexture(sheet.Path)
 					sheet.Loaded = true
 				}
 			}
 
 			// Load font if specified
 			if view.Font != nil && !view.Font.Loaded {
-				view.Font.Font = rl.LoadFont(view.Font.Path)
+				view.Font.Font = rm.LoadFont(view.Font.Path)
 				view.Font.Loaded = true
 			}
 
@@ -295,7 +409,7 @@ func (rm *ResourceManager) LoadView(viewName string) error {
 			for j := range view.Textures {
 				tex := &view.Textures[j]
 				if !tex.Loaded {
-					tex.Texture = rl.LoadTexture(tex.Path)
+					tex.Texture = rm.LoadTexture(tex.Path)
 					tex.Loaded = true
 				}
 			}
@@ -505,13 +619,13 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 			if resource.IsSheet {
 				for _, sheet := range view.SpriteSheets {
 					if sheet.Name == resource.Name {
-						return fmt.Errorf("SpriteSheet name conflict: %s. Name already exists.", resource.Name)
+						return fmt.Errorf("SpriteSheet name conflict: %s. Name already exists", resource.Name)
 					}
 				}
 			} else {
 				for _, tex := range view.Textures {
 					if tex.Name == resource.Name {
-						return fmt.Errorf("Texture name conflict: %s. Name already exists.", resource.Name)
+						return fmt.Errorf("Texture name conflict: %s. Name already exists", resource.Name)
 					}
 				}
 			}
@@ -536,10 +650,8 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 				}
 
 				if len(resource.SheetData) == 0 {
-					tempTexture := rl.LoadTexture(resource.Path)
 					fileName := strings.TrimSuffix(filepath.Base(resource.Path), filepath.Ext(resource.Path))
-					resource.SheetData = ScanSpriteSheet(resource.Name, fileName, tempTexture, gridSizeX, gridSizeY, resource.SheetMargin)
-					rl.UnloadTexture(tempTexture)
+					resource.SheetData = rm.ScanSpriteSheetEmbedded(resource.Name, fileName, resource.Path, gridSizeX, gridSizeY, resource.SheetMargin)
 				}
 
 				for spriteName, pos := range resource.SheetData {
@@ -554,7 +666,7 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 
 				// Load the sheet if the scene is currently loaded
 				if view.Loaded {
-					spriteSheet.Texture = rl.LoadTexture(spriteSheet.Path)
+					spriteSheet.Texture = rm.LoadTexture(spriteSheet.Path)
 					spriteSheet.Loaded = true
 				}
 			} else {
@@ -567,7 +679,7 @@ func (rm *ResourceManager) AddResource(sceneName string, resource Resource) erro
 
 				// Load the texture if the scene is currently loaded
 				if view.Loaded {
-					texture.Texture = rl.LoadTexture(texture.Path)
+					texture.Texture = rm.LoadTexture(texture.Path)
 					texture.Loaded = true
 					view.Textures[len(view.Textures)-1] = texture
 				}

@@ -2,6 +2,7 @@ package audio
 
 import (
 	"fmt"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ type AudioManager struct {
 	Volume       float32
 	CurrentMusic *Music
 	IsPlaying    bool
+	embeddedFS   fs.FS
 }
 
 type AudioView struct {
@@ -23,19 +25,19 @@ type AudioView struct {
 }
 
 type Music struct {
-	Name   string
-	Path   string
-	Stream rl.Music
-	Loaded bool
+	Name         string
+	Path         string
+	Stream       rl.Music
+	Loaded       bool
+	EmbeddedData []byte
 }
-
 type Sound struct {
-	Name   string
-	Path   string
-	Sound  rl.Sound
-	Loaded bool
+	Name         string
+	Path         string
+	Sound        rl.Sound
+	Loaded       bool
+	EmbeddedData []byte
 }
-
 type Audio struct {
 	Name string
 	Path string
@@ -49,6 +51,17 @@ func NewAudioManagerWithGlobal(defaultMusic []Audio, defaultSounds []Audio) *Aud
 	am := &AudioManager{
 		Volume: .5,
 		Views:  make([]AudioView, 0),
+	}
+	am.AddAudioView("default", defaultMusic, defaultSounds)
+	am.init()
+	return am
+}
+
+func NewAudioManagerWithGlobalEmbed(defaultMusic []Audio, defaultSounds []Audio, embeddedFS fs.FS) *AudioManager {
+	am := &AudioManager{
+		Volume:     .5,
+		Views:      make([]AudioView, 0),
+		embeddedFS: embeddedFS,
 	}
 	am.AddAudioView("default", defaultMusic, defaultSounds)
 	am.init()
@@ -72,6 +85,102 @@ func (am *AudioManager) init() {
 	rl.SetMasterVolume(am.Volume)
 	// Load default audio resources
 	am.LoadAudioView("default")
+}
+
+// GetEmbeddedFS returns a pointer to the embedded filesystem if available
+func (am *AudioManager) GetEmbeddedFS() *fs.FS {
+	if am.embeddedFS == nil {
+		return nil
+	}
+	return &am.embeddedFS
+}
+
+// LoadMusic wrapper that handles both embedded and file system loading
+func (am *AudioManager) LoadMusic(path string) (rl.Music, []byte) {
+	if am.embeddedFS != nil {
+		return am.loadMusicFromEmbedded(path)
+	}
+	return rl.LoadMusicStream(path), nil
+}
+
+// LoadSound wrapper that handles both embedded and file system loading
+func (am *AudioManager) LoadSound(path string) (rl.Sound, []byte) {
+	if am.embeddedFS != nil {
+		return am.loadSoundFromEmbedded(path)
+	}
+	return rl.LoadSound(path), nil
+}
+func (am *AudioManager) loadMusicFromEmbedded(path string) (rl.Music, []byte) {
+	data, err := fs.ReadFile(am.embeddedFS, path)
+	if err != nil {
+		fmt.Printf("Failed to load embedded music %s: %v\n", path, err)
+		return rl.Music{}, nil
+	}
+
+	// Create a copy of the data to ensure it's not affected by GC
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	// Determine file extension for proper loading
+	ext := strings.ToLower(filepath.Ext(path))
+	var music rl.Music
+
+	switch ext {
+	case ".mp3":
+		music = rl.LoadMusicStreamFromMemory(".mp3", dataCopy, int32(len(dataCopy)))
+	case ".wav":
+		music = rl.LoadMusicStreamFromMemory(".wav", dataCopy, int32(len(dataCopy)))
+	case ".flac":
+		music = rl.LoadMusicStreamFromMemory(".flac", dataCopy, int32(len(dataCopy)))
+	default:
+		fmt.Printf("Unsupported music format for %s\n", path)
+		return rl.Music{}, nil
+	}
+
+	// Validate the loaded music stream
+	if !rl.IsMusicValid(music) {
+		fmt.Printf("Failed to load embedded music %s - invalid stream\n", path)
+		return rl.Music{}, nil
+	}
+
+	return music, dataCopy
+}
+
+func (am *AudioManager) loadSoundFromEmbedded(path string) (rl.Sound, []byte) {
+	data, err := fs.ReadFile(am.embeddedFS, path)
+	if err != nil {
+		fmt.Printf("Failed to load embedded sound %s: %v\n", path, err)
+		return rl.Sound{}, nil
+	}
+
+	// Create a copy of the data to ensure it's not affected by GC
+	dataCopy := make([]byte, len(data))
+	copy(dataCopy, data)
+
+	// Determine file extension for proper loading
+	ext := strings.ToLower(filepath.Ext(path))
+	var wave rl.Wave
+
+	switch ext {
+	case ".wav":
+		wave = rl.LoadWaveFromMemory(".wav", dataCopy, int32(len(dataCopy)))
+	case ".mp3":
+		wave = rl.LoadWaveFromMemory(".mp3", dataCopy, int32(len(dataCopy)))
+	case ".flac":
+		wave = rl.LoadWaveFromMemory(".flac", dataCopy, int32(len(dataCopy)))
+	default:
+		fmt.Printf("Unsupported sound format for %s\n", path)
+		return rl.Sound{}, nil
+	}
+
+	if wave.Data == nil {
+		fmt.Printf("Failed to decode embedded sound %s\n", path)
+		return rl.Sound{}, nil
+	}
+
+	sound := rl.LoadSoundFromWave(wave)
+	rl.UnloadWave(wave)
+	return sound, dataCopy
 }
 
 // Close the audio device and unload all audio resources.
@@ -133,22 +242,27 @@ func (am *AudioManager) AddAudioView(viewName string, musicDefs []Audio, soundDe
 // LoadAudioView loads all music tracks and sound effects for a given audio view.
 // This should be called before playing any audio from the view.
 func (am *AudioManager) LoadAudioView(viewName string) error {
-	for _, view := range am.Views {
-		if view.Name == viewName {
-			for i := range view.Tracks {
-				if !view.Tracks[i].Loaded {
-					view.Tracks[i].Stream = rl.LoadMusicStream(view.Tracks[i].Path)
-					rl.SetMusicVolume(view.Tracks[i].Stream, am.Volume)
-					rl.SetMusicPitch(view.Tracks[i].Stream, 1.0)
-					view.Tracks[i].Loaded = true
+	for i := range am.Views {
+		if am.Views[i].Name == viewName {
+			view := &am.Views[i]
+			for j := range view.Tracks {
+				if !view.Tracks[j].Loaded {
+					stream, embeddedData := am.LoadMusic(view.Tracks[j].Path)
+					view.Tracks[j].Stream = stream
+					view.Tracks[j].EmbeddedData = embeddedData
+					rl.SetMusicVolume(view.Tracks[j].Stream, am.Volume)
+					rl.SetMusicPitch(view.Tracks[j].Stream, 1.0)
+					view.Tracks[j].Loaded = true
 				}
 			}
-			for i := range view.SFX {
-				if !view.SFX[i].Loaded {
-					view.SFX[i].Sound = rl.LoadSound(view.SFX[i].Path)
-					rl.SetSoundVolume(view.SFX[i].Sound, am.Volume)
-					rl.SetSoundPitch(view.SFX[i].Sound, 1.0)
-					view.SFX[i].Loaded = true
+			for j := range view.SFX {
+				if !view.SFX[j].Loaded {
+					sound, embeddedData := am.LoadSound(view.SFX[j].Path)
+					view.SFX[j].Sound = sound
+					view.SFX[j].EmbeddedData = embeddedData
+					rl.SetSoundVolume(view.SFX[j].Sound, am.Volume)
+					rl.SetSoundPitch(view.SFX[j].Sound, 1.0)
+					view.SFX[j].Loaded = true
 				}
 			}
 			return nil
@@ -210,27 +324,28 @@ func (am *AudioManager) PlayMusic(viewName, musicName string) error {
 				if view.Tracks[i].Name == musicName {
 					music := &view.Tracks[i]
 					if !music.Loaded {
-						return fmt.Errorf("invalid music")
+						return fmt.Errorf("music not loaded: %s", musicName)
 					}
 
 					// Stop current music if playing
-					if am.CurrentMusic != nil && am.CurrentMusic.Loaded {
+					if am.CurrentMusic != nil && am.CurrentMusic.Loaded && rl.IsMusicValid(am.CurrentMusic.Stream) {
 						fmt.Println("Stopping current music")
 						rl.StopMusicStream(am.CurrentMusic.Stream)
 						am.IsPlaying = false
 					}
 
-					am.CurrentMusic = music
-					fmt.Printf("Playing new music (loaded: %v)\n", music.Loaded)
-					if rl.IsMusicValid(music.Stream) {
-						rl.SeekMusicStream(music.Stream, 0.0)
-						rl.PlayMusicStream(music.Stream)
-						rl.SetMusicVolume(music.Stream, am.Volume)
-						am.IsPlaying = true
-						fmt.Println("Music started successfully")
-					} else {
-						return fmt.Errorf("failed to play music - stream not ready")
+					// Validate the music stream before playing
+					if !rl.IsMusicValid(music.Stream) {
+						return fmt.Errorf("invalid music stream for %s", musicName)
 					}
+
+					am.CurrentMusic = music
+					fmt.Printf("Playing new music: %s\n", musicName)
+					rl.SeekMusicStream(music.Stream, 0.0)
+					rl.PlayMusicStream(music.Stream)
+					rl.SetMusicVolume(music.Stream, am.Volume)
+					am.IsPlaying = true
+					fmt.Println("Music started successfully")
 					return nil
 				}
 			}
@@ -268,6 +383,13 @@ func (am *AudioManager) PlaySound(viewName, soundName string) error {
 //	}
 func (am *AudioManager) UpdateMusic() {
 	if am.CurrentMusic == nil || !am.CurrentMusic.Loaded {
+		return
+	}
+
+	if !rl.IsMusicValid(am.CurrentMusic.Stream) {
+		fmt.Printf("Invalid music stream detected, stopping playback\n")
+		am.CurrentMusic = nil
+		am.IsPlaying = false
 		return
 	}
 

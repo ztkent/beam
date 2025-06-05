@@ -1,0 +1,182 @@
+# GoReleaser configuration for Beam Game Engine
+version: 2
+
+project_name: "{{ .Env.PROJECT_NAME | default \"beam-game\" }}"
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+    - go generate ./...
+
+# Build configuration
+builds:
+  - id: beam-game
+    main: "{{ .Env.MAIN_PATH | default \"./cmd/main.go\" }}"
+    binary: "{{ .Env.BINARY_NAME | default .ProjectName }}"
+    skip: '{{ eq .Runtime.Goos "darwin" }}'
+    flags:
+      - -trimpath
+      
+    # Windows and Linux builds
+    goos:
+      - windows
+      - linux
+    goarch:
+      - amd64
+    
+    # Build flags and environment
+    env:
+      - CGO_ENABLED=1
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    
+    # Platform-specific configurations
+    overrides:
+      - goos: windows
+        goarch: amd64
+        env:
+          - CC=x86_64-w64-mingw32-gcc
+          - CXX=x86_64-w64-mingw32-g++
+          - CGO_ENABLED=1
+        ldflags:
+          - -s -w
+          - -H=windowsgui
+          - -X main.version={{.Version}}
+          - -X main.commit={{.Commit}}
+          - -X main.date={{.Date}}
+          - -X main.builtBy=goreleaser
+      
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=gcc
+          - CGO_ENABLED=1
+
+  # macOS ARM64 build
+  - id: beam-game-arm-mac
+    main: "{{ .Env.MAIN_PATH | default \"./cmd/main.go\" }}"
+    binary: "{{ .Env.BINARY_NAME | default .ProjectName }}"
+    # Only run this build on macOS ARM64
+    skip: '{{ ne .Runtime.Goos "darwin" }}'
+    flags:
+      - -trimpath
+      
+    goos:
+      - darwin
+    goarch:
+      - arm64
+    
+    env:
+      - CGO_ENABLED=1
+      - CC=clang
+      - CXX=clang++
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    
+# Archive configuration
+archives:
+  - id: beam-game-archive
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    
+    # Include game assets and raylib
+    files:
+      - assets/**/*
+      - README.md
+      - LICENSE
+      - raylib.dll
+
+    format_overrides:
+      - goos: windows
+        formats: ['zip']
+      - goos: linux
+        formats: ['tar.gz']
+      - goos: darwin
+        formats: ['zip']
+    wrap_in_directory: true
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+changelog:
+  use: github
+  sort: asc
+  abbrev: 0
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "merge conflict"
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: "🚀 New Features"
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: "🐛 Bug Fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: "📖 Documentation"
+      regexp: "^.*docs[(\\w)]*:+.*$"
+      order: 2
+    - title: "🔄 Other Changes"
+      order: 999
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_OWNER | default \"your-username\" }}"
+    name: "{{ .Env.GITHUB_REPO | default .ProjectName }}"
+  
+  header: |
+    ## {{ .ProjectName | title }} {{ .Tag }}
+    Built with Beam Game Engine and Raylib.
+    ### What's New
+  
+  footer: |
+    ## Installation
+    
+    ### Windows (x64)
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_windows_amd64.zip`
+    2. Extract the archive
+    3. Run `{{ .Env.BINARY_NAME | default .ProjectName }}.exe`
+
+    ### Linux (x64)
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_linux_amd64.tar.gz`
+    2. Extract: `tar -xzf {{ .ProjectName }}_{{ .Tag }}_linux_amd64.tar.gz`
+    3. Install Raylib dependencies:
+       - Ubuntu/Debian: `sudo apt-get install libgl1-mesa-dev libxi-dev libxcursor-dev libxrandr-dev libxinerama-dev libwayland-dev libxkbcommon-dev`
+       - Fedora: `sudo dnf install mesa-libGL-devel libXi-devel libXcursor-devel libXrandr-devel libXinerama-devel wayland-devel libxkbcommon-devel`
+    4. Run `./{{ .Env.BINARY_NAME | default .ProjectName }}`
+    
+    ### macOS (ARM64)
+    1. Download `{{ .ProjectName }}_{{ .Tag }}_darwin_arm64.zip`
+    2. Extract the archive
+    3. Run `./{{ .Env.BINARY_NAME | default .ProjectName }}`
+    4. You may need to allow the app in System Preferences > Security & Privacy
+    
+    ### System Requirements
+    - **Windows**: Windows 10 or later (x64), MinGW-w64 runtime, Raylib 5.0+
+    - **Linux**: Ubuntu 18.04 or equivalent with required OpenGL and X11/Wayland libraries (x64), Raylib 5.0+
+    - **macOS**: macOS 11.0+ (ARM64), Raylib 5.0+
+        
+    **Full Changelog**: https://github.com/{{ .Env.GITHUB_OWNER | default "your-username" }}/{{ .Env.GITHUB_REPO | default .ProjectName }}/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev-{{ .ShortCommit }}"
+
+git:
+  tag_sort: -version:refname
+
+metadata:
+  mod_timestamp: "{{ .CommitTimestamp }}"
