@@ -27,6 +27,10 @@
   - Gamepad support with customizable bindings
   - Real-time device switching
   - Configurable deadzones for gamepad sticks
+- [x] Go Releaser 
+  - Handles building with Raylib and packaging assets for distribution
+  - Supports multiple platforms (Linux, macOS, Windows)
+  - Customizable release notes and versioning
 
 ### Map editor
 
@@ -46,12 +50,14 @@
 - [x] Scenes allow for dynamic loading/unloading of resources
 - [x] Support for loading resources from local files or remote URLs
 - [x] Simple rendering system for displaying textures and NPCs
+- [x] Embed textures for simple distribution
 
 ### Audio
 
 - [x] Sound effects
 - [x] Game tracks
 - [x] Per track volume control
+- [x] Embed audio files for simple distribution
 
 ### Other
 
